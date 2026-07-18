@@ -12,6 +12,7 @@ from common.mj_helper import MjaiType, GameInfo, MJAI_WINDS, ChiPengGang, MSGang
 from common.log_helper import LOGGER
 from common.utils import GameMode
 from bot import Bot, reaction_convert_meta
+from sensei_mode import ModeVerdict, classify_from_game_config, classify_mode
 
 NO_EFFECT_METHODS = [
     '.lq.NotifyPlayerLoadGameReady',        # Notify: the game starts
@@ -63,7 +64,10 @@ class GameState:
         
         ### Game info
         self.account_id = 0                     # Majsoul account id
-        self.mode_id:int = -1                   # game mode        
+        self.mode_id:int = -1                   # game mode
+        self.category:int | None = None         # 1=friend, 2=ranked
+        self.room_id:int | None = None          # friend room id (0 if not friend)
+        self.mode_verdict: ModeVerdict | None = None
         self.seat = 0                           # seat index
         #seat 0 is chiicha (起家; first dealer; first East)
         #1-2-3 then goes counter-clockwise        
@@ -84,6 +88,16 @@ class GameState:
         """ if any new round has started (so game info is available)"""
         self.is_game_ended:bool = False         # if game has ended    
              
+    def get_mode_verdict(self) -> ModeVerdict:
+        """Return practice/friend vs ranked policy for Why? coaching."""
+        if self.mode_verdict is not None:
+            return self.mode_verdict
+        return classify_mode(
+            mode_id=self.mode_id if self.mode_id >= 0 else None,
+            category=self.category,
+            room_id=self.room_id,
+        )
+
     def get_game_info(self) -> GameInfo:
         """ Return game info. Return None if N/A"""        
         if self.is_round_started:
@@ -238,11 +252,25 @@ class GameState:
     
     def ms_auth_game(self, liqi_data:dict) -> dict:
         """ Game start, initial info"""
-        try:
-            self.mode_id = liqi_data['gameConfig']['meta']['modeId']
-        except Exception:
-            LOGGER.warning("No modeId in liqi_data['gameConfig']['meta']['modeId']")
-            self.mode_id = -1
+        game_config = liqi_data.get('gameConfig') or {}
+        self.mode_verdict = classify_from_game_config(game_config)
+        self.mode_id = self.mode_verdict.mode_id if self.mode_verdict.mode_id is not None else -1
+        self.category = self.mode_verdict.category
+        self.room_id = self.mode_verdict.room_id
+        LOGGER.info(
+            "Sensei mode: %s (%s) modeId=%s category=%s roomId=%s",
+            self.mode_verdict.policy.value,
+            self.mode_verdict.reason,
+            self.mode_id,
+            self.category,
+            self.room_id,
+        )
+        if self.mode_id < 0:
+            try:
+                self.mode_id = liqi_data['gameConfig']['meta']['modeId']
+            except Exception:
+                LOGGER.warning("No modeId in liqi_data['gameConfig']['meta']['modeId']")
+                self.mode_id = -1
 
         seatList:list = liqi_data['seatList']
         if not seatList:

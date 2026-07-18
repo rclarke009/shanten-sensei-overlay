@@ -1,0 +1,19 @@
+Shanten Sensei Overlay
+======================
+
+This repository is a fork of Mahjong Copilot (latorc/MahjongCopilot),
+licensed under the GNU General Public License v3.0. See LICENSE.
+
+Shanten Sensei coaching (Why? explanations) is provided by the separate
+Apache-2.0 package `shanten-sensei`, installed as a dependency. That
+package is not part of this GPL tree; it is linked at runtime.
+
+Upstream and related projects
+-----------------------------
+
+- Mahjong Copilot — https://github.com/latorc/MahjongCopilot (GPL-3.0)
+- Akagi — https://github.com/shinkuan/Akagi (design / Mortal bot conventions)
+- Mortal — https://github.com/Equim-chan/Mortal
+- mjai protocol — https://mjai.app/
+
+Practice / friend / vs-AI only. Not for ranked ladder assistance.

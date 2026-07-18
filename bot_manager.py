@@ -21,6 +21,8 @@ from common.lan_str import LanStr
 from common import utils
 from common.utils import FPSCounter
 from bot import Bot, get_bot
+from sensei_adapter import SenseiCoach, WhyResult, SENSEI_AVAILABLE
+from sensei_mode import PRACTICE_BANNER, ModePolicy, classify_mode
 
 
 METHODS_TO_IGNORE = [
@@ -55,7 +57,9 @@ class BotManager:
         self.mitm_proxinject_need_update:bool = False    # set this True to update mitm and prox inject in main thread
         self.is_loading_bot:bool = False                # is bot being loaded
         self.main_thread_exception:Exception = None     # Exception that had stopped the main thread
-        self.game_exception:Exception = None            # game run time error (but does not break main thread)        
+        self.game_exception:Exception = None            # game run time error (but does not break main thread)
+        self.sensei = SenseiCoach()
+        self._why_request: bool = False                 # GUI sets True to request on-demand Why?
         
         
     def start(self):
@@ -168,6 +172,35 @@ class BotManager:
             return reaction
         else:   # None
             return None
+
+    def get_mode_verdict(self):
+        """Practice/friend vs ranked gate for Why?."""
+        if self.game_state:
+            return self.game_state.get_mode_verdict()
+        return classify_mode()
+
+    def why_enabled(self) -> bool:
+        return self.get_mode_verdict().why_enabled and SENSEI_AVAILABLE
+
+    def request_why(self) -> None:
+        """Queue a Why? explanation (processed on bot thread / next overlay update)."""
+        self._why_request = True
+
+    def get_last_why(self) -> WhyResult | None:
+        return self.sensei.last_result
+
+    def get_status_line(self) -> str | None:
+        return self.sensei.last_status_line
+
+    def explain_why_now(self) -> WhyResult:
+        """Synchronously explain current pending reaction (for GUI button)."""
+        mode = self.get_mode_verdict()
+        reaction = self.get_pending_reaction()
+        gi = self.get_game_info()
+        result = self.sensei.explain_why(
+            reaction, gi, self.game_state, mode, use_llm=None
+        )
+        return result
         
     
     def enable_overlay(self):
@@ -184,6 +217,9 @@ class BotManager:
     
     def update_overlay(self):
         """ update the overlay if conditions are met"""
+        if self._why_request:
+            self._why_request = False
+            self.explain_why_now()
         if self._update_overlay_conditions_met():
             self._update_overlay_guide()
             self._update_overlay_botleft()
@@ -423,6 +459,7 @@ class BotManager:
         # End game processes
         # self.game_flow_id = None
         self.game_state = None
+        self.sensei.clear()
         if self.browser:    # fix for corner case
             self.browser.overlay_clear_guidance()
         self.game_exception = None
@@ -451,11 +488,10 @@ class BotManager:
         
     def _update_overlay_botleft(self):
         # update overlay bottom left text        
-        # maj copilot
-        text = '😸' + self.st.lan().APP_TITLE
+        text = self.st.lan().APP_TITLE
 
         # Model
-        model_text = '🤖'
+        model_text = ''
         if self.is_bot_created():
             model_text += self.st.lan().MODEL + ": " + self.st.model_type
         else:
@@ -463,30 +499,49 @@ class BotManager:
         
         # autoplay
         if self.st.enable_automation:
-            autoplay_text = '✅' + self.st.lan().AUTOPLAY + ': ' + self.st.lan().ON
+            autoplay_text = self.st.lan().AUTOPLAY + ': ' + self.st.lan().ON
         else:
-            autoplay_text = '⬛' + self.st.lan().AUTOPLAY + ': ' + self.st.lan().OFF
+            autoplay_text = self.st.lan().AUTOPLAY + ': ' + self.st.lan().OFF
         if self.automation.is_running_execution():
-            autoplay_text += "🖱️⏳"
+            autoplay_text += " ..."
 
-        # line 4
-        if self.main_thread_exception:
-            line = '❌' + self.st.lan().MAIN_THREAD_ERROR
-        elif self.game_exception:
-            line = '❌' + self.st.lan().GAME_ERROR
-        elif self.is_browser_zoom_off():
-            line = '❌' + self.st.lan().CHECK_ZOOM
-        elif self.is_game_syncing():
-            line = '⏳'+ self.st.lan().SYNCING
-        elif self.is_bot_calculating():
-            line = '⏳'+ self.st.lan().CALCULATING
-        elif self.is_in_game():
-            line = '▶️' + self.st.lan().GAME_RUNNING
+        # mode / practice banner
+        mode = self.get_mode_verdict()
+        if self.is_in_game():
+            if mode.policy == ModePolicy.ALLOWED:
+                mode_line = PRACTICE_BANNER
+            else:
+                mode_line = f"Why? disabled — {mode.reason}"
         else:
-            line = '🟢' + self.st.lan().READY_FOR_GAME            
-        
-        text = '\n'.join((text, model_text, autoplay_text, line))       
-        self.browser.overlay_update_botleft(text)
+            mode_line = PRACTICE_BANNER
+
+        # line status
+        if self.main_thread_exception:
+            line = self.st.lan().MAIN_THREAD_ERROR
+        elif self.game_exception:
+            line = self.st.lan().GAME_ERROR
+        elif self.is_browser_zoom_off():
+            line = self.st.lan().CHECK_ZOOM
+        elif self.is_game_syncing():
+            line = self.st.lan().SYNCING
+        elif self.is_bot_calculating():
+            line = self.st.lan().CALCULATING
+        elif self.is_in_game():
+            line = self.st.lan().GAME_RUNNING
+        else:
+            line = self.st.lan().READY_FOR_GAME
+
+        lines = [text, model_text, autoplay_text, mode_line, line]
+        status = self.sensei.last_status_line
+        if status:
+            lines.append(status)
+        why = self.sensei.last_result
+        if why and why.ok and why.summary:
+            lines.append("Why?: " + why.summary)
+        elif why and why.error:
+            lines.append("Why?: " + why.error)
+
+        self.browser.overlay_update_botleft('\n'.join(lines))
 
     
     def _do_automation(self, reaction:dict):

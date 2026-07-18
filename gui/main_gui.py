@@ -1,7 +1,6 @@
 """
-Main GUI implementation for Mahjong Copilot
-The GUI is a desktop app based on tkinter library
-GUI functions: controlling browser settings, displaying AI guidance info, game status
+Main GUI for Shanten Sensei overlay (fork of Mahjong Copilot).
+Desktop app based on tkinter: browser control, AI guidance, Why? coaching.
 """
 
 import os
@@ -127,11 +126,27 @@ class MainGUI(tk.Tk):
         self.timer.pack(**pack_args)
         self.tb2.add_sep()        
                
+        # === practice banner ===
+        cur_row += 1
+        self.banner_var = tk.StringVar(value=self.st.lan().PRACTICE_ONLY)
+        self.banner_label = ttk.Label(
+            self.grid_frame,
+            textvariable=self.banner_var,
+            foreground="#8B4513",
+        )
+        self.banner_label.grid(row=cur_row, **grid_args)
+        self.grid_frame.grid_rowconfigure(cur_row, weight=0)
+
         # === AI guidance ===
         cur_row += 1
-        _label = ttk.Label(self.grid_frame, text=self.st.lan().AI_OUTPUT)
-        _label.grid(row=cur_row, **grid_args)
+        ai_header = tk.Frame(self.grid_frame)
+        ai_header.grid(row=cur_row, **grid_args)
         self.grid_frame.grid_rowconfigure(cur_row, weight=0)
+        ttk.Label(ai_header, text=self.st.lan().AI_OUTPUT).pack(side=tk.LEFT)
+        self.btn_why = ttk.Button(
+            ai_header, text=self.st.lan().WHY_BUTTON, command=self._on_btn_why_clicked
+        )
+        self.btn_why.pack(side=tk.RIGHT, padx=4)
         
         cur_row += 1
         self.ai_guide_var = tk.StringVar()
@@ -143,9 +158,27 @@ class MainGUI(tk.Tk):
             relief=tk.SUNKEN, padx=5,pady=5,
             )
         self.text_ai_guide.grid(row=cur_row, **grid_args)
-        self.grid_frame.grid_rowconfigure(cur_row, weight=1)        
+        self.grid_frame.grid_rowconfigure(cur_row, weight=1)
 
-        # === game info ===
+        # === Sensei Why? text ===
+        cur_row += 1
+        ttk.Label(self.grid_frame, text=self.st.lan().SENSEI_EXPLAIN).grid(
+            row=cur_row, **grid_args
+        )
+        self.grid_frame.grid_rowconfigure(cur_row, weight=0)
+        cur_row += 1
+        self.why_var = tk.StringVar()
+        self.text_why = tk.Label(
+            self.grid_frame,
+            textvariable=self.why_var,
+            font=GUI_STYLE.font_normal("Segoe UI", 14),
+            height=3, anchor=tk.NW, justify=tk.LEFT, wraplength=580,
+            relief=tk.SUNKEN, padx=5, pady=5,
+        )
+        self.text_why.grid(row=cur_row, **grid_args)
+        self.grid_frame.grid_rowconfigure(cur_row, weight=1)
+
+        # === game info + status strip ===
         cur_row += 1
         _label = ttk.Label(self.grid_frame, text=self.st.lan().GAME_INFO)
         _label.grid(row=cur_row, **grid_args)
@@ -161,6 +194,23 @@ class MainGUI(tk.Tk):
             )
         self.text_gameinfo.grid(row=cur_row, **grid_args)
         self.grid_frame.grid_rowconfigure(cur_row, weight=1)
+
+        cur_row += 1
+        ttk.Label(self.grid_frame, text=self.st.lan().STATUS_STRIP).grid(
+            row=cur_row, **grid_args
+        )
+        self.grid_frame.grid_rowconfigure(cur_row, weight=0)
+        cur_row += 1
+        self.status_strip_var = tk.StringVar()
+        self.text_status_strip = tk.Label(
+            self.grid_frame,
+            textvariable=self.status_strip_var,
+            height=1, anchor=tk.W, justify=tk.LEFT,
+            font=GUI_STYLE.font_normal("Segoe UI", 12),
+            relief=tk.SUNKEN, padx=5, pady=3,
+        )
+        self.text_status_strip.grid(row=cur_row, **grid_args)
+        self.grid_frame.grid_rowconfigure(cur_row, weight=0)
         
         # === Model info ===
         cur_row += 1
@@ -218,11 +268,32 @@ class MainGUI(tk.Tk):
             self.bot_manager.disable_autojoin()
         else:
             self.bot_manager.enable_autojoin()
+
+    def _on_btn_why_clicked(self):
+        """On-demand Sensei explanation for the pending Mortal recommendation."""
+        if not self.bot_manager.why_enabled():
+            mode = self.bot_manager.get_mode_verdict()
+            self.why_var.set(
+                self.st.lan().WHY_DISABLED + f" ({mode.reason})"
+            )
+            return
+        result = self.bot_manager.explain_why_now()
+        if result.ok:
+            self.why_var.set(result.summary)
+            if result.status_line:
+                self.status_strip_var.set(result.status_line)
+        else:
+            self.why_var.set(result.error or "Why? failed")
             
 
     def _on_btn_log_clicked(self):
         # LOGGER.debug('Open log')
-        os.startfile(LogHelper.log_file_name)
+        try:
+            os.startfile(LogHelper.log_file_name)
+        except AttributeError:
+            # macOS / Linux
+            import subprocess
+            subprocess.Popen(["open", LogHelper.log_file_name])  # noqa: S603
         
 
     def _on_btn_settings_clicked(self):
@@ -315,6 +386,17 @@ class MainGUI(tk.Tk):
             else:
                 sw.switch_off()
 
+        # Practice banner + Why? button state
+        mode = self.bot_manager.get_mode_verdict()
+        if self.bot_manager.is_in_game() and not mode.why_enabled:
+            self.banner_var.set(self.st.lan().WHY_DISABLED + f" — {mode.reason}")
+            self.btn_why.config(state=tk.DISABLED)
+        else:
+            self.banner_var.set(self.st.lan().PRACTICE_ONLY)
+            self.btn_why.config(
+                state=tk.NORMAL if self.bot_manager.why_enabled() else tk.DISABLED
+            )
+
         # Update AI guide from Reaction
         pending_reaction = self.bot_manager.get_pending_reaction()
         if pending_reaction:
@@ -325,6 +407,14 @@ class MainGUI(tk.Tk):
             self.ai_guide_var.set(ai_guide_str)
         else:
             self.ai_guide_var.set("")
+
+        # Sensei Why? + status strip (cached)
+        why = self.bot_manager.get_last_why()
+        if why and why.ok:
+            self.why_var.set(why.summary)
+        status = self.bot_manager.get_status_line()
+        if status:
+            self.status_strip_var.set(status)
 
         # update game info: display tehai + tsumohai
         gi:GameInfo = self.bot_manager.get_game_info()

@@ -1,15 +1,20 @@
-# 麻将 Copilot / Mahjong Copilot
+# Shanten Sensei Overlay
+
+Fork of [Mahjong Copilot](https://github.com/latorc/MahjongCopilot) with **Shanten Sensei** coaching: Mortal still recommends the move; Sensei explains **why** on demand.
+
+**Practice / friend / vs-AI only — not for ranked.**
+
+Upstream Copilot docs and community: [mjcopilot.com](https://mjcopilot.com) · [Discord](https://discord.gg/7hcZYTFw5r)
+
+Explainer library (separate repo, Apache-2.0): [shanten_sensei](https://github.com/rclarke009/shanten_sensei) — see `docs/phase2-kickoff.md` there.
+
+---
+
+# 麻将 Copilot / Mahjong Copilot (upstream)
 
 麻将 AI 助手，基于 mjai (Mortal模型) 实现的机器人。会对游戏对局的每一步进行指导。现支持雀魂三人、四人麻将。
 
-加入QQ群：1031865144
-<br>
-Click to <a href="https://discord.gg/7hcZYTFw5r" target="_blank">Join Discord</a>
-
-Mahjong AI Assistant for Majsoul, based on mjai (Mortal model) bot impelementaion. When you are in a Majsoul game, AI will give you step-by-step guidance. Now supports Majsoul 3-person and 4-person game modes.
-
-下载、帮助和更多信息请访问网站 Please see website for download, help, and more information  
-<a href="https://mjcopilot.com/help" target="_blank">帮助信息 Help Info </a> | <a href="https://mjcopilot.com" target="_blank">https://mjcopilot.com</a>
+Mahjong AI Assistant for Majsoul, based on mjai (Mortal model) bot implementation.
 
 ---
 
@@ -41,21 +46,30 @@ Features:
 4. 安装 Playwright + Chromium
 5. 主程序入口: main.py
 
-### To Develope
+### To Develop (Sensei overlay)
 
-1. Clone the repo
-2. Install Python virtual environment. Python version 3.11 recommended.
-3. Install dependencies from requirements.txt
-4. Install Playwright + Chromium
-5. Main entry: main.py
+1. Clone this fork **and** sibling `shanten_sensei`
+2. Python 3.11+ venv; `pip install -r requirements.txt`
+3. `pip install -e ../shanten_sensei` (or your clone path)
+4. Playwright + Chromium; Akagi-compatible local Mortal model in settings
+5. Optional: `OPENAI_API_KEY` / `SENSEI_API_KEY` for LLM Why? (template fallback otherwise)
+6. `python main.py` — enable Overlay, play friend / vs-AI, press **Why?**
+
+Unit tests (no Majsoul):
+
+```bash
+pip install -e ../shanten_sensei pytest
+python -m pytest tests/test_sensei_mode.py tests/test_sensei_adapter.py -q
+```
 
 ### 示例脚本 Sample script：
 ```batch
-git clone https://github.com/latorc/MahjongCopilot.git
-cd MahjongCopilot
+git clone https://github.com/rclarke009/shanten-sensei-overlay.git
+cd shanten-sensei-overlay
 python -m venv venv
 CALL venv\Scripts\activate.bat
 pip install -r requirements.txt
+pip install -e ..\shanten_sensei
 set PLAYWRIGHT_BROWSERS_PATH=0
 playwright install chromium
 python main.py
@@ -108,5 +122,7 @@ This program supports different types of AI models. The 'Local' Model type uses 
   MJAI: https://mjai.app
 
 ## 许可 / License
-本项目使用 GNU GPL v3 许可协议。  
-协议全文请见 [LICENSE](LICENSE)
+本项目使用 GNU GPL v3 许可协议（继承上游 Mahjong Copilot）。  
+协议全文请见 [LICENSE](LICENSE)。归属说明见 [NOTICE](NOTICE)。
+
+Sensei explainer library is Apache-2.0 and lives in a separate repository.

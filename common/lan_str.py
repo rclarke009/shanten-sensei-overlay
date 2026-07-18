@@ -5,7 +5,7 @@ class LanStr:
     LANGUAGE_NAME = 'English'
 
     # GUI
-    APP_TITLE = 'Mahjong Copilot'
+    APP_TITLE = 'Shanten Sensei'
     START_BROWSER = "Start Web Client"
     WEB_OVERLAY = "Overlay"
     AUTOPLAY = "Autoplay"
@@ -18,7 +18,12 @@ class LanStr:
     EXIT = "Exit"
     EIXT_CONFIRM = "Are you sure you want to exit?"
     AI_OUTPUT = 'AI Guidance'
-    GAME_INFO = 'Game Info'    
+    GAME_INFO = 'Game Info'
+    WHY_BUTTON = "Why?"
+    STATUS_STRIP = "Hand status"
+    PRACTICE_ONLY = "Practice / vs-AI / friend only — not for ranked"
+    WHY_DISABLED = "Why? disabled in this mode"
+    SENSEI_EXPLAIN = "Sensei explanation"
     ON = "On"
     OFF = "Off"
     
@@ -139,7 +144,7 @@ class LanStrZHS(LanStr):
     LANGUAGE_NAME = '简体中文'
     
     # GUI
-    APP_TITLE = '麻将 Copilot'
+    APP_TITLE = '向听 Sensei'
     START_BROWSER = "启动网页客户端"
     WEB_OVERLAY = "网页 HUD"
     AUTOPLAY = "自动打牌"
@@ -152,7 +157,12 @@ class LanStrZHS(LanStr):
     EXIT = "退出"
     EIXT_CONFIRM = "确定退出程序?"
     AI_OUTPUT = 'AI 提示'
-    GAME_INFO = '游戏信息'    
+    GAME_INFO = '游戏信息'
+    WHY_BUTTON = "为什么？"
+    STATUS_STRIP = "手牌状态"
+    PRACTICE_ONLY = "仅练习 / 人机 / 友人战 — 不可用于段位战"
+    WHY_DISABLED = "当前模式不可用为什么？"
+    SENSEI_EXPLAIN = "Sensei 讲解"
     ON = "开"
     OFF = "关"
     
