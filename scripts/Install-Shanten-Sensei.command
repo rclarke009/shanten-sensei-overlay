@@ -84,15 +84,27 @@ PY
 
 DMG_PATH="$(choose_dmg)"
 
+# Clear quarantine on downloaded images (can block attach on some macOS versions).
+xattr -dr com.apple.quarantine "${DMG_PATH}" 2>/dev/null || true
+
+if ! hdiutil imageinfo "${DMG_PATH}" >/dev/null 2>&1; then
+  echo "Downloaded file is not a valid disk image. Delete it and run this installer again:" >&2
+  echo "  ${DMG_PATH}" >&2
+  pause
+  exit 1
+fi
+
 echo "Mounting disk image…"
-MOUNT_POINT="$(hdiutil attach "${DMG_PATH}" -nobrowse | while read -r dev path _; do
-  if [[ "${path}" == /Volumes/* ]]; then
-    echo "${path}"
-    break
-  fi
-done)"
-if [[ -z "${MOUNT_POINT}" || ! -d "${MOUNT_POINT}" ]]; then
+ATTACH_OUT="$(hdiutil attach "${DMG_PATH}" -nobrowse 2>&1)" || {
+  echo "${ATTACH_OUT}" >&2
   echo "Could not mount ${DMG_PATH}" >&2
+  pause
+  exit 1
+}
+MOUNT_POINT="$(echo "${ATTACH_OUT}" | grep -o '/Volumes/.*' | head -1)"
+if [[ -z "${MOUNT_POINT}" || ! -d "${MOUNT_POINT}" ]]; then
+  echo "${ATTACH_OUT}" >&2
+  echo "Could not find a mount point for ${DMG_PATH}" >&2
   pause
   exit 1
 fi
