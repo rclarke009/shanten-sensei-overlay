@@ -12,7 +12,7 @@ from common.log_helper import LOGGER
 from common.bundled_model import install_bundled_model_if_needed, open_model_license
 from common.safari_reconnect import SafariReconnectError, quit_safari_and_open
 from common.sensei_paths import write_sensei_env
-from common.settings import Settings
+from common.settings import Settings, apply_deliverable_locale_defaults, LOCALE_DEFAULTS_VERSION
 from common.utils import Folder, sub_folder
 from .utils import GUI_STYLE
 
@@ -111,7 +111,7 @@ class FirstRunWizard(tk.Toplevel):
         ).pack(anchor=tk.W, padx=16)
         ttk.Label(
             frame,
-            text="You may see a Keychain prompt to trust the local proxy certificate.",
+            text="Opens the English Majsoul client (YoStar). You may see a Keychain prompt to trust the local proxy certificate.",
             wraplength=520,
         ).pack(anchor=tk.W, padx=16, pady=(0, 4))
         ttk.Button(
@@ -167,7 +167,13 @@ class FirstRunWizard(tk.Toplevel):
         except SafariReconnectError as exc:
             messagebox.showerror("Safari", str(exc), parent=self)
 
+    def _apply_english_defaults(self) -> None:
+        apply_deliverable_locale_defaults(self.st)
+        self.st.locale_defaults_version = LOCALE_DEFAULTS_VERSION
+
     def _on_skip(self) -> None:
+        self._apply_english_defaults()
+        self.st.save_json()
         self.destroy()
         if self._on_done:
             self._on_done()
@@ -203,6 +209,7 @@ class FirstRunWizard(tk.Toplevel):
         self.st.safari_mode = self._safari_var.get()
         self.st.auto_launch_browser = False
         self.st.enable_proxinject = False
+        self._apply_english_defaults()
 
         api_key = self._api_key_var.get().strip()
         if api_key:

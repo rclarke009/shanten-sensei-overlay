@@ -2,6 +2,8 @@
 
 Practice / friend / vs-AI only — **not for ranked**.
 
+**Defaults:** English overlay UI and the English YoStar Majsoul client (`mahjongsoul.game.yo-star.com`). The setup wizard and app updates re-apply these defaults. Change either in **Settings** if you prefer another language or client URL.
+
 ## Option A — One-click install (recommended)
 
 1. Open [Releases](https://github.com/rclarke009/shanten-sensei-overlay/releases/latest).

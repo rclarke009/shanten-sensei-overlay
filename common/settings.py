@@ -5,10 +5,32 @@ import sys
 from pathlib import Path
 from typing import Callable
 from .log_helper import LOGGER
-from .lan_str import LanStr, LAN_OPTIONS
+from .lan_str import DEFAULT_LANGUAGE, DEFAULT_MAJSOUL_URL, LanStr, LAN_OPTIONS
 from . import utils
 
 DEFAULT_SETTING_FILE = 'settings.json'
+# Bump when deliverable installs should re-apply English UI + YoStar URL (e.g. after update).
+LOCALE_DEFAULTS_VERSION = 1
+
+
+def apply_deliverable_locale_defaults(settings: "Settings") -> bool:
+    """English overlay UI + YoStar Majsoul URL for Mac deliverable installs."""
+    changed = False
+    if settings.language != DEFAULT_LANGUAGE:
+        settings.language = DEFAULT_LANGUAGE
+        changed = True
+    if settings.ms_url != DEFAULT_MAJSOUL_URL:
+        settings.ms_url = DEFAULT_MAJSOUL_URL
+        changed = True
+    return changed
+
+
+def _migrate_deliverable_locale(settings: "Settings") -> None:
+    """Re-apply English defaults once per LOCALE_DEFAULTS_VERSION (covers app updates)."""
+    if settings.locale_defaults_version >= LOCALE_DEFAULTS_VERSION:
+        return
+    apply_deliverable_locale_defaults(settings)
+    settings.locale_defaults_version = LOCALE_DEFAULTS_VERSION
 
 def _settings_path(json_file: str) -> str:
     """Resolve settings file path (writable; Application Support when frozen)."""
@@ -35,13 +57,13 @@ class Settings:
         self.gui_set_dpi:bool = self._get_value("gui_set_dpi", True, self.valid_bool)
         self.browser_width:int = self._get_value("browser_width", 1280, lambda x: 0 < x < 19999)
         self.browser_height:int = self._get_value("browser_height", 720, lambda x: 0 < x < 19999)
-        self.ms_url:str = self._get_value("ms_url", "https://mahjongsoul.game.yo-star.com/",self.valid_url)
+        self.ms_url:str = self._get_value("ms_url", DEFAULT_MAJSOUL_URL, self.valid_url)
         self.enable_chrome_ext:bool = self._get_value("enable_chrome_ext", False, self.valid_bool)
         self.mitm_port:int = self._get_value("mitm_port", 10999, self.valid_mitm_port)
         self.upstream_proxy:str = self._get_value("upstream_proxy","")  # mitm upstream proxy server e.g. http://ip:port
         self.enable_proxinject:bool = self._get_value("enable_proxinject", False, self.valid_bool)
         self.inject_process_name:str = self._get_value("inject_process_name", "jantama_mahjongsoul")
-        self.language:str = self._get_value("language", list(LAN_OPTIONS.keys())[-1], self.valid_language)  # language code
+        self.language:str = self._get_value("language", DEFAULT_LANGUAGE, self.valid_language)
         self.enable_overlay:bool = self._get_value("enable_overlay", True, self.valid_bool) # not shown
         # Safari companion: PAC-scoped proxy + companion window (macOS); no Playwright Chromium
         self.safari_mode: bool = self._get_value("safari_mode", False, self.valid_bool)
@@ -104,7 +126,10 @@ class Settings:
         self.setup_complete: bool = self._get_value(
             "setup_complete", False, self.valid_bool
         )
-        # Compact mode implies Auto Why so the reason log fills without clicks
+        self.locale_defaults_version: int = self._get_value(
+            "locale_defaults_version", 0, lambda x: isinstance(x, int)
+        )
+        _migrate_deliverable_locale(self)
         if self.hide_ai_options and not self.auto_why:
             self.auto_why = True
         

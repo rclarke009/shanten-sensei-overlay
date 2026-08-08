@@ -346,3 +346,6 @@ LAN_OPTIONS:dict[str, LanStr] = {
     'ZHS': LanStrZHS(), 
 }
 """ dict of {language code: LanString instance}"""
+
+DEFAULT_LANGUAGE = "EN"
+DEFAULT_MAJSOUL_URL = "https://mahjongsoul.game.yo-star.com/"

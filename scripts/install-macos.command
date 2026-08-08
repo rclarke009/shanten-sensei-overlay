@@ -62,6 +62,7 @@ if [[ ! -f "${SETTINGS}" ]]; then
     "setup_complete": false,
     "model_type": "Local",
     "model_file": "mortal.pth",
+    "language": "EN",
     "ms_url": "https://mahjongsoul.game.yo-star.com/"
 }
 JSON
