@@ -1,6 +1,8 @@
 """ Settings file and options """
 
 import json
+import sys
+from pathlib import Path
 from typing import Callable
 from .log_helper import LOGGER
 from .lan_str import LanStr, LAN_OPTIONS
@@ -8,10 +10,21 @@ from . import utils
 
 DEFAULT_SETTING_FILE = 'settings.json'
 
+def _settings_path(json_file: str) -> str:
+    """Resolve settings file path (writable; Application Support when frozen)."""
+    path = Path(json_file)
+    if path.is_absolute():
+        return str(path)
+    if getattr(sys, "frozen", False):
+        from common.sensei_paths import app_support_dir
+        return str(app_support_dir() / json_file)
+    return utils.sub_file(".", json_file)
+
 class Settings:
     """ Settings class to load and save settings to json file"""
     def __init__(self, json_file:str=DEFAULT_SETTING_FILE) -> None:
         self._json_file = json_file
+        self._settings_path = _settings_path(json_file)
         self._settings_dict:dict = self.load_json()        
         # read settings or set default values
         # variable names must match keys in json, for saving later
@@ -96,13 +109,12 @@ class Settings:
             self.auto_why = True
         
         self.save_json()
-        LOGGER.info("Settings initialized and saved to %s", self._json_file)
+        LOGGER.info("Settings initialized and saved to %s", self._settings_path)
         
     def load_json(self) -> dict:
         """ Load settings from json file into dict"""
         try:
-            full  = utils.sub_file(".", self._json_file)
-            with open(full, 'r',encoding='utf-8') as file:
+            with open(self._settings_path, 'r',encoding='utf-8') as file:
                 settings_dict:dict = json.load(file)
         except Exception as e:
             LOGGER.warning("Error loading settings. Will use defaults. Error: %s", e)
@@ -115,7 +127,7 @@ class Settings:
         # save all non-private variables (not starting with "_") into dict
         settings_to_save = {key: value for key, value in self.__dict__.items()
                             if not key.startswith('_') and not callable(value)}
-        with open(self._json_file, 'w', encoding='utf-8') as file:
+        with open(self._settings_path, 'w', encoding='utf-8') as file:
             json.dump(settings_to_save, file, indent=4, separators=(', ', ': '))
     
     def _get_value(self, key:str, default_value:any, validator:Callable[[any],bool]=None) -> any:

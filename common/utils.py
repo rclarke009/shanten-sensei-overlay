@@ -146,6 +146,13 @@ def sub_file(folder:str, file:str) -> str:
     return file_str
 
 
+def bundled_file(file_name: str) -> str:
+    """Absolute path to a read-only file shipped in the PyInstaller bundle root."""
+    if getattr(sys, "frozen", False):
+        return str((pathlib.Path(sys._MEIPASS) / file_name).resolve())  # pylint: disable=no-member
+    return str((pathlib.Path(".") / file_name).resolve())
+
+
 def wait_for_file(file:str, timeout:int=5) -> bool:
     """ Wait for file creation (blocking until the file exists) for {timeout} seconds
     returns:

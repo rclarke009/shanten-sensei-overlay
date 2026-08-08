@@ -45,7 +45,7 @@ class Updater:
         # read version number from file "version"
         try:
             self.local_version = None
-            with open(utils.sub_file(".", VERSION_FILE), 'r', encoding='utf-8') as f:
+            with open(utils.bundled_file(VERSION_FILE), 'r', encoding='utf-8') as f:
                 self.local_version = str(f.read()).strip()
         except:#pylint:disable=bare-except
             LOGGER.error("Cannot read version file!")
