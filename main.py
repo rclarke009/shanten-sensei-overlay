@@ -20,6 +20,7 @@ from pathlib import Path
 
 from gui.main_gui import MainGUI
 from common import utils
+from common.bundled_model import install_bundled_model_if_needed
 from common.log_helper import LogHelper
 from common.settings import Settings
 from bot_manager import BotManager
@@ -46,6 +47,7 @@ def main():
     """ Main entry point """
     LogHelper.config_logging()
     _load_sensei_env()
+    install_bundled_model_if_needed()
     setting = Settings()
     # utils.set_dpi_awareness()
     utils.prevent_sleep()

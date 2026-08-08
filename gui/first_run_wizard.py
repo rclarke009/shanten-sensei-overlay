@@ -9,6 +9,7 @@ from tkinter import filedialog, messagebox, ttk
 import tkinter as tk
 
 from common.log_helper import LOGGER
+from common.bundled_model import install_bundled_model_if_needed, open_model_license
 from common.safari_reconnect import SafariReconnectError, quit_safari_and_open
 from common.sensei_paths import write_sensei_env
 from common.settings import Settings
@@ -41,7 +42,14 @@ class FirstRunWizard(tk.Toplevel):
         self._model_path: Path | None = None
 
         self._build()
+        self._prefill_bundled_model()
         self.protocol("WM_DELETE_WINDOW", self._on_skip)
+
+    def _prefill_bundled_model(self) -> None:
+        installed = install_bundled_model_if_needed()
+        if installed and installed.is_file():
+            self._model_path = installed
+            self._model_label.config(text=f"{installed} (bundled, AGPL)")
 
     def _build(self) -> None:
         pad = {"padx": 16, "pady": 6}
@@ -70,7 +78,7 @@ class FirstRunWizard(tk.Toplevel):
         ).pack(anchor=tk.W, **pad)
         ttk.Label(
             frame,
-            text="Download an Akagi-compatible Mortal model, then select the file.",
+            text="A Mortal model is bundled in the Mac app (AGPL). You can keep it or choose another file.",
             wraplength=520,
         ).pack(anchor=tk.W, padx=16)
         model_row = ttk.Frame(frame)
@@ -82,9 +90,14 @@ class FirstRunWizard(tk.Toplevel):
         )
         ttk.Button(
             frame,
-            text="Get model from Akagi",
+            text="Get another model from Akagi",
             command=lambda: webbrowser.open(AKAGI_MODEL_URL),
         ).pack(anchor=tk.W, padx=16)
+        ttk.Button(
+            frame,
+            text="View bundled model license (AGPL)",
+            command=self._open_model_license,
+        ).pack(anchor=tk.W, padx=16, pady=(4, 0))
 
         ttk.Separator(frame).pack(fill=tk.X, pady=8)
 
@@ -137,6 +150,12 @@ class FirstRunWizard(tk.Toplevel):
         self._model_path = Path(path)
         self._model_label.config(text=str(self._model_path))
 
+    def _open_model_license(self) -> None:
+        if not open_model_license():
+            webbrowser.open(
+                "https://github.com/rclarke009/shanten-sensei-overlay/blob/main/licenses/MORTAL_MODEL_NOTICE.md"
+            )
+
     def _reopen_safari(self) -> None:
         try:
             quit_safari_and_open(self.st.ms_url)
@@ -166,7 +185,8 @@ class FirstRunWizard(tk.Toplevel):
             models_dir = sub_folder(Folder.MODEL)
             dest = models_dir / "mortal.pth"
             try:
-                shutil.copy2(self._model_path, dest)
+                if self._model_path.resolve() != dest.resolve():
+                    shutil.copy2(self._model_path, dest)
                 self.st.model_file = "mortal.pth"
             except OSError as exc:
                 LOGGER.warning("Could not copy model: %s", exc)

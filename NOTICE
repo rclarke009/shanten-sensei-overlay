@@ -14,6 +14,7 @@ Upstream and related projects
 - Mahjong Copilot — https://github.com/latorc/MahjongCopilot (GPL-3.0)
 - Akagi — https://github.com/shinkuan/Akagi (design / Mortal bot conventions)
 - Mortal — https://github.com/Equim-chan/Mortal
+- Bundled checkpoint (release builds) — VoidShine/mortal-298k (AGPL-3.0); see licenses/MORTAL_MODEL_NOTICE.md
 - mjai protocol — https://mjai.app/
 
 Practice / friend / vs-AI only. Not for ranked ladder assistance.

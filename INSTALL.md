@@ -9,10 +9,12 @@ Practice / friend / vs-AI only — **not for ranked**.
 3. First launch: if macOS blocks an unsigned build, right-click the app → **Open** → confirm.
 4. Complete the **first-run wizard**:
    - Confirm practice-only use
-   - Choose your Mortal `.pth` model ([Akagi](https://github.com/shinkuan/Akagi) compatible)
+   - The release includes a **bundled Mortal model** (`mortal_298k`, AGPL-3.0) — no separate download required
    - Keep **Safari companion** enabled (default)
    - Optional: paste an OpenAI API key for LLM **Why?** text
 5. Open Majsoul in **Safari** (`https://mahjongsoul.game.yo-star.com/`), join friend / practice / vs-AI, and press **Why?** in the coach window.
+
+License files are on the DMG (`Model-License-AGPL.txt`) and in the app under `licenses/`. See [licenses/MORTAL_MODEL_NOTICE.md](licenses/MORTAL_MODEL_NOTICE.md).
 
 Quit the app when done — it turns off the Safari proxy. If browsing breaks after a crash, see [proxy trust precautions](proxy-trust-precautions.md).
 
@@ -33,7 +35,13 @@ INSTALL_CHROMIUM=1 ./scripts/install-macos.command
 
 ## Mortal model
 
-Shanten Sensei does **not** ship Mortal weights. Download an Akagi-compatible `.pth` and select it in the first-run wizard or **Settings → Model**.
+**macOS Release builds** bundle the community checkpoint [VoidShine/mortal-298k](https://huggingface.co/VoidShine/mortal-298k) under **AGPL-3.0**. It installs automatically to:
+
+`~/Library/Application Support/ShantenSensei/models/mortal.pth`
+
+See [licenses/MORTAL_MODEL_NOTICE.md](licenses/MORTAL_MODEL_NOTICE.md) for attribution and your rights.
+
+**From source / dev installs** do not include weights. Download an Akagi-compatible `.pth` and select it in the first-run wizard or **Settings → Model**.
 
 ## Optional: LLM Why?
 

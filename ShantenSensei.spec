@@ -15,10 +15,13 @@ _candidate_datas = [
     ("proxinject", "proxinject"),
     ("chrome_ext", "chrome_ext"),
     ("crx", "crx"),
+    ("licenses", "licenses"),
     ("version", "."),
     ("NOTICE", "."),
     ("LICENSE", "."),
 ]
+if (root / "bundled_models" / "mortal_298k.pth").is_file():
+    _candidate_datas.append(("bundled_models", "bundled_models"))
 # Vendored libriichi/ is Windows (.pyd); macOS builds use the riichi pip wheel instead.
 if platform.system() != "Darwin":
     _candidate_datas.insert(1, ("libriichi", "libriichi"))

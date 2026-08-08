@@ -108,6 +108,11 @@ def error_to_str(error:Exception, lan:LanStr) -> str:
 
 def sub_folder(folder_name:str) -> pathlib.Path:
     """ return the subfolder Path, create it if not exists"""
+    if folder_name == Folder.MODEL and getattr(sys, "frozen", False):
+        from common.sensei_paths import models_data_dir
+
+        return models_data_dir()
+
     try:
         # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = pathlib.Path(sys._MEIPASS).parent   # pylint: disable=W0212,E1101

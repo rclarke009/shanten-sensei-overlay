@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from common.sensei_paths import app_support_dir, sensei_env_path, write_sensei_env
+from common.sensei_paths import app_support_dir, models_data_dir, sensei_env_path, write_sensei_env
 
 
 def test_app_support_dir_creates(monkeypatch, tmp_path: Path):
@@ -10,6 +10,14 @@ def test_app_support_dir_creates(monkeypatch, tmp_path: Path):
     root = app_support_dir()
     assert root.is_dir()
     assert root.name == "ShantenSensei"
+
+
+def test_models_data_dir_creates(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr("common.sensei_paths.Path.home", lambda: tmp_path)
+    root = models_data_dir()
+    assert root.is_dir()
+    assert root.name == "models"
+    assert root.parent.name == "ShantenSensei"
 
 
 def test_write_sensei_env(monkeypatch, tmp_path: Path):

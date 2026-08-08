@@ -19,6 +19,7 @@ log/
 mitm_config/
 temp/
 /models/*
+bundled_models/*.pth
 test/
 /dev_docs
 /_*.py

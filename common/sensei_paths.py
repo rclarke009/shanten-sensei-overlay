@@ -16,6 +16,13 @@ def app_support_dir() -> Path:
     return root
 
 
+def models_data_dir() -> Path:
+    """Writable Mortal model directory (used for frozen macOS installs)."""
+    root = app_support_dir() / "models"
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
 def sensei_env_path() -> Path:
     return app_support_dir() / ".env"
 
