@@ -23,9 +23,39 @@ class LanStr:
     STATUS_STRIP = "Hand status"
     PRACTICE_ONLY = "Practice / vs-AI / friend only — not for ranked"
     WHY_DISABLED = "Why? disabled in this mode"
-    SENSEI_EXPLAIN = "Sensei explanation"
+    SENSEI_EXPLAIN = "Yakuman says"
+    YAKUMAN_INTRO = (
+        "Hi, I'm Yakuman — you'll get that pun later. "
+        "I'm here to help you learn Riichi Mahjong. "
+        "We'll have you winning in no time!"
+    )
+    YAKUMAN_BYE = "Nice hand work — see you next round. — Yakuman"
+    AUTO_WHY = "Auto Why? (uses API each new tip)"
+    SCORE_TIPS = "Point situation tips (lead / trail / late game)"
+    KNOWN_TERMS = "Terms I know…"
+    KNOWN_TERMS_HINT = "Checked terms keep their names but hide definitions"
+    HIDE_AI_OPTIONS = "Compact coach (hide AI % options)"
+    DARK_THEME = "Dark theme"
+    ALWAYS_ON_TOP = "Keep coach window always on top"
+    CONTROLS_SHOW = "Controls ▾"
+    CONTROLS_HIDE = "Controls ▴"
+    AIMING_FOR = "Aiming for"
+    YAKU_LIST = "Yaku list"
+    REASON_LOG = "Reason log"
     ON = "On"
     OFF = "Off"
+    SAFARI_MODE = "Safari companion mode (macOS; no Chromium)"
+    SAFARI_HINT = "Open Majsoul in Safari beside this window — tips appear here"
+    SAFARI_WAITING = "Safari — open Majsoul"
+    SAFARI_PROXY_ERROR = "Safari proxy / PAC error!"
+    SAFARI_RECONNECT = "Quit Safari & reopen Majsoul"
+    SAFARI_RECONNECT_TITLE = "Reconnect Majsoul"
+    SAFARI_RECONNECT_CONFIRM = (
+        "This will quit Safari completely and close all open tabs and windows. "
+        "Majsoul will reopen in a fresh Safari window so the coach can connect."
+    )
+    SAFARI_RECONNECT_WAITING = "Reopened Majsoul — waiting for Proxy Client…"
+    SAFARI_RECONNECT_ERROR = "Safari reconnect failed!"
     
     # help
     DOWNLOAD_UPDATE = "Download Update"
@@ -95,7 +125,10 @@ class LanStr:
     # errors
     LOCAL_MODEL_ERROR = "Local Model Loading Error!"
     MITM_SERVER_ERROR = "MITM Service Error!"
-    MITM_CERT_NOT_INSTALLED = "Run as admin or manually install MITM cert."
+    MITM_CERT_NOT_INSTALLED = (
+        "MITM cert not trusted. On macOS: allow Keychain prompt, or trust "
+        "mitm_config/mitmproxy-ca-cert.cer manually. On Windows: run as admin."
+    )
     MAIN_THREAD_ERROR = "Main Thread Error!"
     MODEL_NOT_SUPPORT_MODE_ERROR = "Model not supporting game mode"
     CONNECTION_ERROR = "Network Connection Error"
@@ -162,9 +195,39 @@ class LanStrZHS(LanStr):
     STATUS_STRIP = "手牌状态"
     PRACTICE_ONLY = "仅练习 / 人机 / 友人战 — 不可用于段位战"
     WHY_DISABLED = "当前模式不可用为什么？"
-    SENSEI_EXPLAIN = "Sensei 讲解"
+    SENSEI_EXPLAIN = "Yakuman 说"
+    YAKUMAN_INTRO = (
+        "嗨，我是 Yakuman——这个梗你一会儿就懂。 "
+        "我来帮你学立直麻将。 "
+        "很快就能帮你赢上几把！"
+    )
+    YAKUMAN_BYE = "这局辛苦了——下局见。— Yakuman"
+    AUTO_WHY = "自动为什么？（每次新提示调用 API）"
+    SCORE_TIPS = "点数形势提示（领先 / 落后 / 残局）"
+    KNOWN_TERMS = "已会术语…"
+    KNOWN_TERMS_HINT = "勾选后保留术语名，隐藏括号释义"
+    HIDE_AI_OPTIONS = "精简教练（隐藏 AI 选项百分比）"
+    DARK_THEME = "深色主题"
+    ALWAYS_ON_TOP = "教练窗口始终置顶"
+    CONTROLS_SHOW = "控制 ▾"
+    CONTROLS_HIDE = "控制 ▴"
+    AIMING_FOR = "目标役种"
+    YAKU_LIST = "役种一览"
+    REASON_LOG = "理由记录"
     ON = "开"
     OFF = "关"
+    SAFARI_MODE = "Safari 旁路模式（macOS；不使用 Chromium）"
+    SAFARI_HINT = "请在 Safari 中打开雀魂，教练提示显示在此窗口"
+    SAFARI_WAITING = "Safari — 请打开雀魂"
+    SAFARI_PROXY_ERROR = "Safari 代理 / PAC 错误！"
+    SAFARI_RECONNECT = "退出 Safari 并重新打开雀魂"
+    SAFARI_RECONNECT_TITLE = "重新连接雀魂"
+    SAFARI_RECONNECT_CONFIRM = (
+        "这将完全退出 Safari，并关闭所有打开的标签页和窗口。"
+        "雀魂将在新的 Safari 窗口中打开，以便教练连接。"
+    )
+    SAFARI_RECONNECT_WAITING = "已重新打开雀魂 — 等待 Proxy Client…"
+    SAFARI_RECONNECT_ERROR = "Safari 重新连接失败！"
     
     # help
     DOWNLOAD_UPDATE = "下载更新"
@@ -234,7 +297,10 @@ class LanStrZHS(LanStr):
     GAME_NOT_RUNNING = "未启动"
     #error
     LOCAL_MODEL_ERROR = "本地模型加载错误!"
-    MITM_CERT_NOT_INSTALLED = "以管理员运行或手动安装 MITM 证书"
+    MITM_CERT_NOT_INSTALLED = (
+        "MITM 证书未信任。macOS：允许钥匙串提示，或手动信任 "
+        "mitm_config/mitmproxy-ca-cert.cer。Windows：请以管理员运行。"
+    )
     MITM_SERVER_ERROR = "MITM 服务错误!"
     MAIN_THREAD_ERROR = "主进程发生错误!"
     MODEL_NOT_SUPPORT_MODE_ERROR = "模型不支持游戏模式"

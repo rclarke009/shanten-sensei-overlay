@@ -21,6 +21,7 @@ class ToggleSwitch(tk.Frame):
             command: callback function when button is clicked"""
         super().__init__(master, height=height,width=height)
         self.pack_propagate(False)
+        GUI_STYLE.paint_frame(self)
         
         # Load images for on and off states
         img_ht = height*0.4
@@ -33,10 +34,13 @@ class ToggleSwitch(tk.Frame):
         
         # Set initial state
         self.is_on = False
-        self.img_label = tk.Label(self, image=self.img_off)
+        label_kwargs = {}
+        if GUI_STYLE.dark:
+            label_kwargs = {"bg": GUI_STYLE.bg, "fg": GUI_STYLE.text}
+        self.img_label = tk.Label(self, image=self.img_off, **label_kwargs)
         self.img_label.pack(side="top", pady=(0, 10))
         font = GUI_STYLE.font_normal(size=font_size)
-        self.text_label = tk.Label(self, text=text, font=font)
+        self.text_label = tk.Label(self, text=text, font=font, **label_kwargs)
         self.text_label.pack(side="top")
         if command:
             self.command = command
@@ -77,7 +81,7 @@ class ToggleSwitch(tk.Frame):
         
     def _on_enter(self, _event=None):
         """Highlight the label when mouse enters."""
-        self.img_label.config(background="light blue")
+        self.img_label.config(background=GUI_STYLE.hover_bg)
         
 
     def _on_leave(self, _event=None):
@@ -93,6 +97,7 @@ class Timer(tk.Frame):
         super().__init__(master, height=height)
         self.configure(height=height)
         self.pack_propagate(False)
+        GUI_STYLE.paint_frame(self)
 
         # Time setup
         self.font_size:int = font_size
@@ -109,20 +114,35 @@ class Timer(tk.Frame):
 
         # Frame for entries and labels
         self.frame_top = tk.Frame(self)
+        GUI_STYLE.paint_frame(self.frame_top)
         self.frame_top.grid(row=0, column=0, sticky=tk.N, padx=(0, 0), pady=(0, 0))
         self.pack_args = {'side': tk.LEFT, 'padx': (0, 0), 'pady': (1, 1)}    # pack args
         # Setup each entry
         self.entries:list[tk.Entry] = []
+        colon_kwargs = {"font": GUI_STYLE.font_normal(size=self.font_size), "width": 1}
+        if GUI_STYLE.dark:
+            colon_kwargs.update({"bg": GUI_STYLE.bg, "fg": GUI_STYLE.text})
         self._setup_entry(self.hour_var, 23)
-        tk.Label(self.frame_top, text=":", font=GUI_STYLE.font_normal(size=self.font_size), width=1).pack(**self.pack_args)
+        tk.Label(self.frame_top, text=":", **colon_kwargs).pack(**self.pack_args)
         self._setup_entry(self.minute_var, 59)
-        tk.Label(self.frame_top, text=":", font=GUI_STYLE.font_normal(size=self.font_size), width=1).pack(**self.pack_args)
+        tk.Label(self.frame_top, text=":", **colon_kwargs).pack(**self.pack_args)
         self._setup_entry(self.second_var, 59)
 
         # Start/Stop button
-        self.the_btn = tk.Button(
-            self, text=Timer.START, font=GUI_STYLE.font_normal("Segoe UI Emoji",size=self.font_size),
-            command=self._toggle_timer, width=6, padx=1, pady=1)
+        btn_kwargs = {
+            "text": Timer.START,
+            "font": GUI_STYLE.font_normal("Segoe UI Emoji", size=self.font_size),
+            "command": self._toggle_timer,
+            "width": 6,
+            "padx": 1,
+            "pady": 1,
+        }
+        if GUI_STYLE.dark:
+            btn_kwargs.update({"bg": GUI_STYLE.panel, "fg": GUI_STYLE.text,
+                               "activebackground": GUI_STYLE.hover_bg,
+                               "activeforeground": GUI_STYLE.text,
+                               "highlightbackground": GUI_STYLE.line})
+        self.the_btn = tk.Button(self, **btn_kwargs)
         self.the_btn.grid(row=1, column=0, sticky=tk.N, padx=(1, 1),pady=(1, 1))
         if self.hover_text:
             add_hover_text(self.the_btn, self.hover_text)
@@ -150,11 +170,16 @@ class Timer(tk.Frame):
                 self.after_idle(lambda: var.set("00"))
                 return False
         
-        entry = tk.Entry(
-            self.frame_top, textvariable=var, 
-            validatecommand=(self.register(validate_time), '%P'), validate='focusout',
-            font=GUI_STYLE.font_normal(size=self.font_size), width=2, justify=tk.CENTER, 
-        )
+        entry_kwargs = {
+            "textvariable": var,
+            "validatecommand": (self.register(validate_time), '%P'),
+            "validate": "focusout",
+            "font": GUI_STYLE.font_normal(size=self.font_size),
+            "width": 2,
+            "justify": tk.CENTER,
+            **GUI_STYLE.text_kwargs(),
+        }
+        entry = tk.Entry(self.frame_top, **entry_kwargs)
         entry.pack(**self.pack_args)
         self.entries.append(entry)
 
@@ -225,13 +250,27 @@ class ToolBar(tk.Frame):
         super().__init__(master)
         self.height = height
         self._hover_text:tk.Label = None
+        GUI_STYLE.paint_frame(self)
     
     
     def add_button(self, text:str, img_file:str, command) -> tk.Button:
         """ Add a button on toolbar"""        
         img = tk.PhotoImage(file = Path(Folder.RES) / img_file)
         img = img.subsample(int(img.width()/self.height), int(img.height()/self.height))
-        btn = tk.Button(self, image=img, width=self.height, height=self.height, command=command)
+        btn_kwargs = {
+            "image": img,
+            "width": self.height,
+            "height": self.height,
+            "command": command,
+        }
+        if GUI_STYLE.dark:
+            btn_kwargs.update({
+                "bg": GUI_STYLE.bg,
+                "activebackground": GUI_STYLE.hover_bg,
+                "highlightbackground": GUI_STYLE.line,
+                "borderwidth": 0,
+            })
+        btn = tk.Button(self, **btn_kwargs)
         btn.image = img  # Keep a reference to prevent image from being garbage collected
         btn.img_file = img_file
         btn.pack(side=tk.LEFT, padx=4, pady=4)
@@ -260,12 +299,14 @@ class ToolBar(tk.Frame):
 class StatusBar(tk.Frame):
     """ Status bar with multiple columns"""
     def __init__(self, master, n_cols:int):
-        super().__init__(master, highlightbackground='gray', highlightthickness=0)
+        line = GUI_STYLE.line if GUI_STYLE.dark else "gray"
+        super().__init__(master, highlightbackground=line, highlightthickness=0)
         self.n_cols = n_cols
         self.columns:list[tk.Frame] = []
+        GUI_STYLE.paint_frame(self)
         # Style
         style = ttk.Style(self)
-        GUI_STYLE.set_style_normal(style)
+        GUI_STYLE.set_style_normal(style, dark=GUI_STYLE.dark)
 
         for i in range(n_cols):
             column = self._create_column(i)
@@ -274,11 +315,15 @@ class StatusBar(tk.Frame):
 
     def _create_column(self, index:int) -> tk.Frame:
          # Background color for the column
+        line = GUI_STYLE.line if GUI_STYLE.dark else "gray"
+        col_kwargs = {"highlightbackground": line, "highlightthickness": 1}
+        if GUI_STYLE.dark:
+            col_kwargs["bg"] = GUI_STYLE.bg
         if index < self.n_cols - 1:
-            column_frame = tk.Frame(self, highlightbackground='gray', highlightthickness=1)
+            column_frame = tk.Frame(self, **col_kwargs)
             column_frame.pack(side=tk.LEFT, padx=1, pady=1, expand=False)
         else:
-            column_frame = tk.Frame(self, highlightbackground='gray', highlightthickness=1)
+            column_frame = tk.Frame(self, **col_kwargs)
             column_frame.pack(side=tk.LEFT, padx=1, pady=1, expand=True, fill=tk.X)
 
         # Label with icon and text

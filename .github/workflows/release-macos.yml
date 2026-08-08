@@ -1,0 +1,65 @@
+name: Release macOS
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip wheel
+          pip install torch==2.2.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt
+
+      - name: Prepare native libraries
+        run: bash scripts/prepare-macos-bundle.sh
+
+      - name: Build app bundle
+        run: pyinstaller ShantenSensei.spec --noconfirm
+
+      - name: Create DMG
+        run: |
+          APP_PATH="dist/Shanten Sensei.app"
+          if [[ ! -d "$APP_PATH" ]]; then
+            echo "Expected app bundle at $APP_PATH"
+            ls -la dist/
+            exit 1
+          fi
+          hdiutil create -volname "Shanten Sensei" -srcfolder "$APP_PATH" -ov -format UDZO "dist/ShantenSensei-macOS.dmg"
+          shasum -a 256 dist/ShantenSensei-macOS.dmg > dist/ShantenSensei-macOS.dmg.sha256
+          cat dist/ShantenSensei-macOS.dmg.sha256
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/ShantenSensei-macOS.dmg
+            dist/ShantenSensei-macOS.dmg.sha256
+            INSTALL.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload workflow artifact
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ShantenSensei-macOS
+          path: |
+            dist/ShantenSensei-macOS.dmg
+            dist/ShantenSensei-macOS.dmg.sha256

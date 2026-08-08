@@ -26,15 +26,23 @@ class HelpWindow(tk.Toplevel):
         self.win_size = (750, 700)
         self.geometry(f"{self.win_size[0]}x{self.win_size[1]}")  # Set the window size
         # self.resizable(False, False)
+        style = ttk.Style(self)
+        GUI_STYLE.set_style_normal(style, dark=st.dark_theme)
+        GUI_STYLE.paint_root(self)
 
         self.html_text:str = None
+        # Chrome only — HTML body colors are left to content
+        html_kwargs = {}
+        if GUI_STYLE.dark:
+            html_kwargs = {"bg": GUI_STYLE.panel, "fg": GUI_STYLE.text}
         self.html_box = HTMLScrolledText(
             self, html=st.lan().HELP+st.lan().LOADING,
             wrap=tk.CHAR, font=GUI_STYLE.font_normal(), height=25,
-            state=tk.DISABLED)
+            state=tk.DISABLED, **html_kwargs)
         self.html_box.pack(padx=10, pady=10, side=tk.TOP, fill=tk.BOTH, expand=True)        
 
         self.frame_bot = tk.Frame(self, height=30)
+        GUI_STYLE.paint_frame(self.frame_bot)
         self.frame_bot.pack(expand=True, fill=tk.X, padx=10, pady=10)
         col_widths = [int(w*self.win_size[0]) for w in (0.1, 0.4, 0.1)]
         for idx, width in enumerate(col_widths):

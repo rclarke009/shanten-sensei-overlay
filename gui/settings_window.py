@@ -9,6 +9,7 @@ from common.settings import Settings
 from common.lan_str import LAN_OPTIONS
 from bot import MODEL_TYPE_STRINGS
 from .utils import GUI_STYLE, add_hover_text
+from .terms_window import TermsWindow
 
 class SettingsWindow(tk.Toplevel):
     """ Settings dialog window"""
@@ -16,13 +17,12 @@ class SettingsWindow(tk.Toplevel):
         super().__init__(parent)
         self.st = setting
 
-        self.geometry('700x675')
-        self.minsize(700,675)        
         # self.resizable(False, False)
-        # set position: within main window
+        # size + position in one call so position-only geometry does not drop size
         parent_x = parent.winfo_x()
         parent_y = parent.winfo_y()
-        self.geometry(f'+{parent_x+10}+{parent_y+10}')
+        self.geometry(f'700x710+{parent_x + 10}+{parent_y + 10}')
+        self.minsize(700, 710)
 
         # flags
         self.exit_save:bool = False             # save btn clicked
@@ -31,13 +31,23 @@ class SettingsWindow(tk.Toplevel):
         self.mitm_proxinject_updated:bool = False          # mitm settings updated
         
         style = ttk.Style(self)
-        GUI_STYLE.set_style_normal(style)
+        GUI_STYLE.set_style_normal(style, dark=self.st.dark_theme)
+        GUI_STYLE.paint_root(self)
         self.create_widgets()
         
 
     def create_widgets(self):
         """ Create widgets for settings dialog"""
         self.title(self.st.lan().SETTINGS)
+
+        # Buttons at top so Save/Cancel stay visible without scrolling
+        button_frame = ttk.Frame(self)
+        button_frame.pack(side=tk.TOP, fill=tk.X)
+        cancel_button = ttk.Button(button_frame, text=self.st.lan().CANCEL, command=self._on_cancel)
+        cancel_button.pack(side=tk.LEFT, padx=20, pady=12)
+        save_button = ttk.Button(button_frame, text=self.st.lan().SAVE, command=self._on_save)
+        save_button.pack(side=tk.RIGHT, padx=20, pady=12)
+
         # Main frame
         main_frame = ttk.Frame(self, padding="20")
         main_frame.pack(expand=True, fill="both")        
@@ -64,6 +74,17 @@ class SettingsWindow(tk.Toplevel):
         self.client_size_var = tk.StringVar(value=setting_size)
         select_menu = ttk.Combobox(main_frame, textvariable=self.client_size_var, values=options, state="readonly", width=std_wid)
         select_menu.grid(row=cur_row, column=3, **args_entry)
+
+        # Safari companion mode (macOS PAC + companion window; restart required)
+        cur_row += 1
+        self.safari_mode_var = tk.BooleanVar(value=self.st.safari_mode)
+        safari_entry = ttk.Checkbutton(
+            main_frame,
+            variable=self.safari_mode_var,
+            text=self.st.lan().SAFARI_MODE,
+            width=std_wid * 4,
+        )
+        safari_entry.grid(row=cur_row, column=0, columnspan=4, **args_entry)
         
         # majsoul url
         cur_row += 1
@@ -89,6 +110,7 @@ class SettingsWindow(tk.Toplevel):
         number_entry.grid(row=cur_row, column=1, **args_entry)
         # upstream proxy
         _frame = tk.Frame(main_frame)
+        GUI_STYLE.paint_frame(_frame)
         _frame.grid(row=cur_row, column=2, columnspan=2)
         _label = ttk.Label(_frame, text=self.st.lan().UPSTREAM_PROXY)
         _label.pack(side=tk.LEFT, **pad_args)
@@ -235,24 +257,84 @@ class SettingsWindow(tk.Toplevel):
         _label = ttk.Label(main_frame, text=self.st.lan().RANDOM_DELAY_RANGE)
         _label.grid(row=cur_row, column=0, **args_label)
         self.delay_random_lower_var = tk.DoubleVar(value=self.st.delay_random_lower)
-        delay_lower_entry = tk.Entry(main_frame, textvariable= self.delay_random_lower_var,width=std_wid)
-        delay_lower_entry.grid(row=cur_row, column=1, **args_entry)
+        delay_entry_kwargs = {"width": std_wid, **GUI_STYLE.text_kwargs()}
+        delay_lower_entry = tk.Entry(
+            main_frame, textvariable=self.delay_random_lower_var, **delay_entry_kwargs
+        )
+        delay_lower_entry.grid(row=cur_row, column=1, **args_entry) 
         self.delay_random_upper_var = tk.DoubleVar(value=self.st.delay_random_upper)
-        delay_upper_entry = tk.Entry(main_frame, textvariable= self.delay_random_upper_var,width=std_wid)
+        delay_upper_entry = tk.Entry(
+            main_frame, textvariable=self.delay_random_upper_var, **delay_entry_kwargs
+        )
         delay_upper_entry.grid(row=cur_row, column=2, **args_entry)
+
+        # Sensei: Auto Why?
+        cur_row += 1
+        self.auto_why_var = tk.BooleanVar(value=self.st.auto_why)
+        auto_why_entry = ttk.Checkbutton(
+            main_frame, variable=self.auto_why_var, text=self.st.lan().AUTO_WHY, width=std_wid * 3
+        )
+        auto_why_entry.grid(row=cur_row, column=0, columnspan=3, **args_entry)
+
+        # Sensei: Point situation tips
+        cur_row += 1
+        self.score_tips_var = tk.BooleanVar(value=self.st.score_tips)
+        score_tips_entry = ttk.Checkbutton(
+            main_frame,
+            variable=self.score_tips_var,
+            text=self.st.lan().SCORE_TIPS,
+            width=std_wid * 3,
+        )
+        score_tips_entry.grid(row=cur_row, column=0, columnspan=3, **args_entry)
+
+        # Sensei: Terms I know…
+        cur_row += 1
+        self._known_terms_draft = list(self.st.known_terms)
+        terms_btn = ttk.Button(
+            main_frame,
+            text=self.st.lan().KNOWN_TERMS,
+            command=self._open_terms_window,
+            width=std_wid * 2,
+        )
+        terms_btn.grid(row=cur_row, column=0, columnspan=2, **args_entry)
+
+        # Sensei: Compact coach (hide AI % options)
+        cur_row += 1
+        self.hide_ai_options_var = tk.BooleanVar(value=self.st.hide_ai_options)
+        hide_opts_entry = ttk.Checkbutton(
+            main_frame,
+            variable=self.hide_ai_options_var,
+            text=self.st.lan().HIDE_AI_OPTIONS,
+            width=std_wid * 3,
+        )
+        hide_opts_entry.grid(row=cur_row, column=0, columnspan=3, **args_entry)
+
+        # Dark theme
+        cur_row += 1
+        self.dark_theme_var = tk.BooleanVar(value=self.st.dark_theme)
+        dark_theme_entry = ttk.Checkbutton(
+            main_frame,
+            variable=self.dark_theme_var,
+            text=self.st.lan().DARK_THEME,
+            width=std_wid * 3,
+        )
+        dark_theme_entry.grid(row=cur_row, column=0, columnspan=3, **args_entry)
+
+        # Always on top
+        cur_row += 1
+        self.always_on_top_var = tk.BooleanVar(value=self.st.always_on_top)
+        always_on_top_entry = ttk.Checkbutton(
+            main_frame,
+            variable=self.always_on_top_var,
+            text=self.st.lan().ALWAYS_ON_TOP,
+            width=std_wid * 3,
+        )
+        always_on_top_entry.grid(row=cur_row, column=0, columnspan=3, **args_entry)
         
         # tips :Settings
         cur_row += 1
         label_settings = ttk.Label(main_frame, text=self.st.lan().SETTINGS_TIPS, width=std_wid*4)
         label_settings.grid(row=cur_row, column=0, columnspan=4, **args_entry)
-        
-        # Buttons frame
-        button_frame = ttk.Frame(self)
-        button_frame.pack(side=tk.BOTTOM, fill=tk.X)
-        cancel_button = ttk.Button(button_frame, text=self.st.lan().CANCEL, command=self._on_cancel)
-        cancel_button.pack(side=tk.LEFT, padx=20, pady=20)
-        save_button = ttk.Button(button_frame, text=self.st.lan().SAVE, command=self._on_save)
-        save_button.pack(side=tk.RIGHT, padx=20, pady=20)
         
         
     def _on_save(self):
@@ -321,8 +403,14 @@ class SettingsWindow(tk.Toplevel):
         delay_lower_new = max(0,delay_lower_new)
         delay_upper_new = max(delay_lower_new, delay_upper_new)
         
-        # === save new values to setting ===        
-        self.st.auto_launch_browser = self.auto_launch_var.get()
+        # === save new values to setting ===
+        safari_mode_new = self.safari_mode_var.get()
+        if safari_mode_new != self.st.safari_mode:
+            self.mitm_proxinject_updated = True
+        self.st.safari_mode = safari_mode_new
+        self.st.auto_launch_browser = (
+            False if safari_mode_new else self.auto_launch_var.get()
+        )
         self.st.browser_width = width_new
         self.st.browser_height = height_new
         self.st.ms_url = ms_url_new
@@ -330,7 +418,9 @@ class SettingsWindow(tk.Toplevel):
         self.st.mitm_port = mitm_port_new
         self.st.upstream_proxy = upstream_proxy_new
         self.st.language = language_new
-        self.st.enable_proxinject = proxy_inject_new
+        self.st.enable_proxinject = (
+            False if safari_mode_new else proxy_inject_new
+        )
         
         self.st.model_type = model_type_new
         self.st.model_file = model_file_new
@@ -349,6 +439,21 @@ class SettingsWindow(tk.Toplevel):
         self.st.auto_reply_emoji_rate = reply_emoji_new        
         self.st.delay_random_lower = delay_lower_new
         self.st.delay_random_upper = delay_upper_new
+        hide_opts_new = self.hide_ai_options_var.get()
+        if hide_opts_new != self.st.hide_ai_options:
+            self.gui_need_reload = True
+        self.st.hide_ai_options = hide_opts_new
+        dark_theme_new = self.dark_theme_var.get()
+        if dark_theme_new != self.st.dark_theme:
+            self.gui_need_reload = True
+        self.st.dark_theme = dark_theme_new
+        self.st.always_on_top = self.always_on_top_var.get()
+        auto_why_new = self.auto_why_var.get()
+        if hide_opts_new:
+            auto_why_new = True
+        self.st.auto_why = auto_why_new
+        self.st.score_tips = self.score_tips_var.get()
+        self.st.known_terms = self.st._normalize_known_terms(self._known_terms_draft)
         
         self.st.save_json()
         self.exit_save = True
@@ -356,6 +461,14 @@ class SettingsWindow(tk.Toplevel):
             messagebox.showinfo(self.st.lan().SETTINGS, self.st.lan().SETTINGS_TIPS, parent=self, icon='info', type='ok')
         self.destroy()
         
+
+    def _open_terms_window(self):
+        win = TermsWindow(
+            self, self.st, initial_terms=list(self._known_terms_draft)
+        )
+        self.wait_window(win)
+        if win.exit_save:
+            self._known_terms_draft = list(win.result_terms)
 
     def _on_cancel(self):
         LOGGER.info("Closing settings window without saving")

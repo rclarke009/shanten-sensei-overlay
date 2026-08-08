@@ -82,10 +82,18 @@ class BotNotSupportingMode(Exception):
 
 def error_to_str(error:Exception, lan:LanStr) -> str:
     """ Convert error to language specific string"""
+    # Local import avoids circular import at module load
+    from common.macos_proxy import SafariProxyError
+    from common.safari_reconnect import SafariReconnectError
+
     if isinstance(error, LocalModelException):
         return lan.LOCAL_MODEL_ERROR
     elif isinstance(error, MitmCertNotInstalled):
-        return lan.MITM_CERT_NOT_INSTALLED + f"{error.args}"    
+        return lan.MITM_CERT_NOT_INSTALLED + f" {error.args}"
+    elif isinstance(error, SafariProxyError):
+        return lan.SAFARI_PROXY_ERROR + f" {error}"
+    elif isinstance(error, SafariReconnectError):
+        return lan.SAFARI_RECONNECT_ERROR + f" {error}"
     elif isinstance(error, MITMException):
         return lan.MITM_SERVER_ERROR    
     elif isinstance(error, BotNotSupportingMode):
@@ -134,16 +142,18 @@ def wait_for_file(file:str, timeout:int=5) -> bool:
 
 
 def sub_run_args() -> dict:
-    """ return **args for subprocess.run"""
-    startup_info = subprocess.STARTUPINFO()
-    startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-    startup_info.wShowWindow = subprocess.SW_HIDE
+    """ return **args for subprocess.run (platform-safe)."""
     args = {
-        'capture_output':True, 
-        'text': True,
-        'check': False,
-        'shell': True,
-        'startupinfo': startup_info}
+        "capture_output": True,
+        "text": True,
+        "check": False,
+    }
+    if sys.platform == "win32":
+        startup_info = subprocess.STARTUPINFO()
+        startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startup_info.wShowWindow = subprocess.SW_HIDE
+        args["shell"] = True
+        args["startupinfo"] = startup_info
     return args
 
 
@@ -157,34 +167,64 @@ def get_cert_serial_number(cert_file:str) ->str:
     return hex_serial
 
 
+def get_cert_sha1_fingerprint(cert_file: str) -> str:
+    """SHA-1 fingerprint of the cert as uppercase hex without colons."""
+    from cryptography.hazmat.primitives import hashes
+
+    with open(cert_file, "rb") as file:
+        cert_data = file.read()
+    cert = x509.load_pem_x509_certificate(cert_data, default_backend())
+    return cert.fingerprint(hashes.SHA1()).hex().upper()
+
+
+def _darwin_login_keychain() -> str:
+    home = pathlib.Path.home()
+    for name in ("login.keychain-db", "login.keychain"):
+        path = home / "Library" / "Keychains" / name
+        if path.exists():
+            return str(path)
+    return str(home / "Library" / "Keychains" / "login.keychain-db")
+
+
 def is_certificate_installed(cert_file:str) -> tuple[bool, str]:
     """Check if the given certificate is installed in the system certificate store.
     Returns:
         (bool, str): True if the certificate is found in the system store, str is the stdout"""
-    # Get the hex serial number from the certificate file
     try:
-        serial_number = get_cert_serial_number(cert_file)
-        
         if sys.platform == "win32":
-            # Use certutil to look up the certificate by its serial number in the Root store
+            serial_number = get_cert_serial_number(cert_file)
             cmd = ['certutil', '-store', 'Root', serial_number]
             store_found_phrase = serial_number
-        elif sys.platform == "darwin":
-            # TODO test on MacOS
-            # Use security to find the certificate by its serial number in the System keychain
-            cmd = ['security', 'find-certificate', '-c', serial_number, '/Library/Keychains/System.keychain']
-            store_found_phrase = 'attributes:'
-        else:   # unsupported platform
-            return False
-        args = sub_run_args()
-        result = subprocess.run(cmd, **args)    #pylint:disable=subprocess-run-check
-        # Check if the command output indicates the certificate was found
-        if result.returncode==0:
-            if store_found_phrase in result.stdout or store_found_phrase.lower() in result.stdout:
-                return True, result.stdout + result.stderr
-        return False, result.stdout + result.stderr
+            args = sub_run_args()
+            result = subprocess.run(cmd, **args)    #pylint:disable=subprocess-run-check
+            out = (result.stdout or "") + (result.stderr or "")
+            if result.returncode == 0 and (
+                store_found_phrase in out or store_found_phrase.lower() in out.lower()
+            ):
+                return True, out
+            return False, out
+        if sys.platform == "darwin":
+            sha1 = get_cert_sha1_fingerprint(cert_file)
+            keychains = [
+                _darwin_login_keychain(),
+                "/Library/Keychains/System.keychain",
+            ]
+            outputs: list[str] = []
+            for kc in keychains:
+                result = subprocess.run(
+                    ["security", "find-certificate", "-a", "-Z", kc],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                out = (result.stdout or "") + (result.stderr or "")
+                outputs.append(out)
+                # security prints "SHA-1 hash: AABBCC..."
+                if sha1 in out.replace(" ", "").upper() or sha1 in out.upper():
+                    return True, out
+            return False, "\n".join(outputs)
+        return False, "Unsupported platform for MITM cert check"
     except subprocess.SubprocessError as e:
-        # error occured while running the command    
         return False, str(e)
     except Exception as e:
         return False, str(e)
@@ -201,21 +241,43 @@ def install_root_cert(cert_file:str):
     if sys.platform == "win32":
         print(f'"{cert_file}"')
         full_command = ["certutil","-addstore","Root",cert_file]
-        # full_command = [
-        #     'powershell', '-Command', 
-        #     f"Start-Process 'certutil' -ArgumentList '-addstore', 'Root', '{cert_file}' -Wait -Verb 'RunAs';"
-        #     f"exit $LASTEXITCODE"
-        # ]
         p=subprocess.run(full_command, **sub_run_args())
         stdout, stderr = p.stdout, p.stderr        
     elif sys.platform == "darwin":
-        # TODO Test on MAC system
-        cmd = ['sudo', 'security', 'add-trusted-cert', '-d', '-r', 'trustRoot', '-k', '/Library/Keychains/System.keychain', cert_file]
-        p = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        # Prefer login keychain (user auth dialog) before System + sudo
+        login_kc = _darwin_login_keychain()
+        cmd_login = [
+            "security",
+            "add-trusted-cert",
+            "-d",
+            "-r",
+            "trustRoot",
+            "-k",
+            login_kc,
+            cert_file,
+        ]
+        p = subprocess.run(cmd_login, capture_output=True, text=True, check=False)
         stdout, stderr = p.stdout, p.stderr
+        if p.returncode != 0:
+            cmd_sys = [
+                "sudo",
+                "security",
+                "add-trusted-cert",
+                "-d",
+                "-r",
+                "trustRoot",
+                "-k",
+                "/Library/Keychains/System.keychain",
+                cert_file,
+            ]
+            p = subprocess.run(cmd_sys, capture_output=True, text=True, check=False)
+            stdout = (stdout or "") + "\n" + (p.stdout or "")
+            stderr = (stderr or "") + "\n" + (p.stderr or "")
     else:
         print("Unknown Platform. Please manually install MITM certificate:", cert_file)
-        return False, ""
+        return False, (
+            f"Please trust the MITM cert manually, then retry. Cert path: {cert_file}"
+        )
     
     # Check if successful
     text = f"{stdout}\n{stderr}"

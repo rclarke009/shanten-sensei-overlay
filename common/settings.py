@@ -22,7 +22,7 @@ class Settings:
         self.gui_set_dpi:bool = self._get_value("gui_set_dpi", True, self.valid_bool)
         self.browser_width:int = self._get_value("browser_width", 1280, lambda x: 0 < x < 19999)
         self.browser_height:int = self._get_value("browser_height", 720, lambda x: 0 < x < 19999)
-        self.ms_url:str = self._get_value("ms_url", "https://game.maj-soul.com/1/",self.valid_url)
+        self.ms_url:str = self._get_value("ms_url", "https://mahjongsoul.game.yo-star.com/",self.valid_url)
         self.enable_chrome_ext:bool = self._get_value("enable_chrome_ext", False, self.valid_bool)
         self.mitm_port:int = self._get_value("mitm_port", 10999, self.valid_mitm_port)
         self.upstream_proxy:str = self._get_value("upstream_proxy","")  # mitm upstream proxy server e.g. http://ip:port
@@ -30,6 +30,8 @@ class Settings:
         self.inject_process_name:str = self._get_value("inject_process_name", "jantama_mahjongsoul")
         self.language:str = self._get_value("language", list(LAN_OPTIONS.keys())[-1], self.valid_language)  # language code
         self.enable_overlay:bool = self._get_value("enable_overlay", True, self.valid_bool) # not shown
+        # Safari companion: PAC-scoped proxy + companion window (macOS); no Playwright Chromium
+        self.safari_mode: bool = self._get_value("safari_mode", False, self.valid_bool)
         
         # AI Model settings
         self.model_type:str = self._get_value("model_type", "Local")
@@ -63,6 +65,35 @@ class Settings:
         self.auto_join_game:bool = self._get_value("auto_join_game", False, self.valid_bool)
         self.auto_join_level:int = self._get_value("auto_join_level", 1, self.valid_game_level)
         self.auto_join_mode:int = self._get_value("auto_join_mode", utils.GAME_MODES[0], self.valid_game_mode)
+
+        # Sensei: auto-regenerate Why? when Mortal tip changes (API cost per tip)
+        self.auto_why: bool = self._get_value("auto_why", False, self.valid_bool)
+        # Sensei: opt-in lead/trail/late-game point-situation tips (default off)
+        self.score_tips: bool = self._get_value("score_tips", False, self.valid_bool)
+        # Sensei: terms the player already knows (hide parenthetical definitions)
+        raw_known = self._get_value("known_terms", [], self.valid_known_terms_list)
+        self.known_terms: list = self._normalize_known_terms(raw_known)
+        # Compact coaching: hide Mortal % options; smaller teaching window
+        self.hide_ai_options: bool = self._get_value(
+            "hide_ai_options", True, self.valid_bool
+        )
+        # Dark chrome for the coaching window (matches Sensei review page)
+        self.dark_theme: bool = self._get_value("dark_theme", True, self.valid_bool)
+        # Keep coaching window above other apps (tk -topmost)
+        self.always_on_top: bool = self._get_value(
+            "always_on_top", False, self.valid_bool
+        )
+        # Collapse setup toolbars (actions + Overlay/Autoplay/Join) during play
+        self.hide_toolbars: bool = self._get_value(
+            "hide_toolbars", False, self.valid_bool
+        )
+        # First-run wizard completed (model, Safari, optional API key)
+        self.setup_complete: bool = self._get_value(
+            "setup_complete", False, self.valid_bool
+        )
+        # Compact mode implies Auto Why so the reason log fills without clicks
+        if self.hide_ai_options and not self.auto_why:
+            self.auto_why = True
         
         self.save_json()
         LOGGER.info("Settings initialized and saved to %s", self._json_file)
@@ -126,6 +157,23 @@ class Settings:
             return True
         else:
             return False
+
+    def valid_known_terms_list(self, value) -> bool:
+        """True when value is a list of strings (ids validated on normalize)."""
+        if not isinstance(value, list):
+            return False
+        return all(isinstance(x, str) for x in value)
+
+    def _normalize_known_terms(self, value) -> list:
+        """Drop unknown catalog ids; keep a stable sorted list."""
+        if not isinstance(value, list):
+            return []
+        try:
+            from shanten_sensei.glosses import normalize_known_terms
+
+            return sorted(normalize_known_terms(value))
+        except Exception:
+            return sorted({x for x in value if isinstance(x, str) and x})
         
     def valid_username(self, username:str) -> bool:
         """ return true if username valid"""

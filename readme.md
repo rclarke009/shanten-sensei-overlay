@@ -10,6 +10,22 @@ Explainer library (separate repo, Apache-2.0): [shanten_sensei](https://github.c
 
 ---
 
+## Download for Mac
+
+**Practice / friend / vs-AI only — not for ranked.**
+
+| Method | Link |
+|--------|------|
+| **Release .dmg** | [Releases](https://github.com/rclarke009/shanten-sensei-overlay/releases) |
+| **Install guide** | [INSTALL.md](INSTALL.md) |
+| **One-click script** | Double-click `scripts/install-macos.command` after cloning this repo |
+
+Safari companion is the default (no Chromium download). First launch runs a setup wizard for your Mortal model and optional API key.
+
+**Developers:** see [To Develop](#to-develop-sensei-overlay) below.
+
+---
+
 # 麻将 Copilot / Mahjong Copilot (upstream)
 
 麻将 AI 助手，基于 mjai (Mortal模型) 实现的机器人。会对游戏对局的每一步进行指导。现支持雀魂三人、四人麻将。
@@ -48,31 +64,30 @@ Features:
 
 ### To Develop (Sensei overlay)
 
-1. Clone this fork **and** sibling `shanten_sensei`
-2. Python 3.11+ venv; `pip install -r requirements.txt`
-3. `pip install -e ../shanten_sensei` (or your clone path)
-4. Playwright + Chromium; Akagi-compatible local Mortal model in settings
-5. Optional: `OPENAI_API_KEY` / `SENSEI_API_KEY` for LLM Why? (template fallback otherwise)
-6. `python main.py` — enable Overlay, play friend / vs-AI, press **Why?**
+On macOS there is often no bare `python` / `pip` — use `python3.11` and a venv.
+
+```bash
+cd /path/to/shanten-sensei-overlay
+python3.11 -m venv venv
+source venv/bin/activate          # Windows: venv\Scripts\activate
+python -m pip install -U pip
+pip install -r requirements.txt
+pip install 'shanten-sensei>=0.1.0'
+# Dev sibling: pip install -e ../shanten_sensei
+# Compat pins (torch 2.2 + mitmproxy 10.2):
+pip install 'numpy<2' 'httpx>=0.27,<0.28' 'httpcore>=1.0,<1.0.9' 'h11>=0.11,<0.15'
+PLAYWRIGHT_BROWSERS_PATH=0 playwright install chromium
+python main.py                    # Overlay on; friend / vs-AI; press Why?
+```
+
+Optional: `OPENAI_API_KEY` / `SENSEI_API_KEY` for LLM Why? (template fallback otherwise). Place an Akagi-compatible Mortal model via Settings.
 
 Unit tests (no Majsoul):
 
 ```bash
-pip install -e ../shanten_sensei pytest
+source venv/bin/activate
+pip install pytest
 python -m pytest tests/test_sensei_mode.py tests/test_sensei_adapter.py -q
-```
-
-### 示例脚本 Sample script：
-```batch
-git clone https://github.com/rclarke009/shanten-sensei-overlay.git
-cd shanten-sensei-overlay
-python -m venv venv
-CALL venv\Scripts\activate.bat
-pip install -r requirements.txt
-pip install -e ..\shanten_sensei
-set PLAYWRIGHT_BROWSERS_PATH=0
-playwright install chromium
-python main.py
 ```
 ### 配置模型
 本程序支持几种模型来源。其中，本地模型（Local）是基于 Akagi 兼容的 Mortal 模型。要获取 Akagi 的模型，请参见 <a href="https://github.com/shinkuan/Akagi" target="_blank"> Akagi Github </a> 的说明。

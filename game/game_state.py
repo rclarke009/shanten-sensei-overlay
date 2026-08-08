@@ -41,12 +41,16 @@ class KyokuState:
         self.my_tehai:list = None           # list of tehai in mjai format
         self.my_tsumohai:str = None         # tsumohai in mjai format, or None
         self.doras_ms:list[str] = []        # list of doras in ms tile format
+        # Sensei-shaped open melds for the player (chi/pon/kan); cleared each kyoku
+        self.my_calls: list[dict] = []
 
         ### flags
         self.pending_reach_acc:dict = None  # Pending MJAI reach accepted message
         self.first_round:bool = True        # flag marking if it is the first move in new round
         self.self_in_reach:bool = False     # if self is in reach state
         self.player_reach:list = [False]*4  # list of player reach states
+        # Per-seat discard rivers (mjai tiles); cleared each new kyoku
+        self.rivers: list[list[str]] = [[], [], [], []]
 
 class GameState:
     """ Stores Majsoul game state and processes inputs outputs to/from Bot"""
@@ -111,11 +115,50 @@ class GameState:
                 self_reached = self.kyoku_state.self_in_reach,
                 self_seat = self.seat,
                 player_reached = self.kyoku_state.player_reach.copy(),
-                is_first_round = self.kyoku_state.first_round,                
+                is_first_round = self.kyoku_state.first_round,
+                my_calls = list(self.kyoku_state.my_calls),
             )
             return gi
         else:   # if game not started: None
             return None
+
+    def get_visible_discards(self) -> dict[str, list[str]]:
+        """Seat-keyed rivers for Sensei visible-adjusted ukeire."""
+        if not self.is_round_started:
+            return {}
+        return {
+            str(i): list(river)
+            for i, river in enumerate(self.kyoku_state.rivers)
+            if river
+        }
+
+    def _record_my_call(self, call: dict) -> None:
+        """Append a Sensei-shaped open meld for the local player."""
+        self.kyoku_state.my_calls.append(call)
+
+    def _upgrade_pon_to_kakan(self, tile_mjai: str, consumed_mjai: list[str]) -> None:
+        """Upgrade a tracked pon to kakan so meld count stays correct."""
+        base = tile_mjai.replace("r", "")
+        for call in self.kyoku_state.my_calls:
+            if call.get("type") != "pon":
+                continue
+            pai = str(call.get("pai") or "").replace("r", "")
+            consumed = call.get("consumed") or []
+            consumed_bases = {str(t).replace("r", "") for t in consumed}
+            if pai == base or base in consumed_bases:
+                call["type"] = "kakan"
+                call["pai"] = tile_mjai
+                call["consumed"] = list(consumed_mjai)
+                return
+        # Pon missing from tracking (resync) — still record so tile visibility is ok;
+        # avoid double-counting by only appending when no open meld exists yet.
+        self._record_my_call(
+            {
+                "type": "kakan",
+                "pai": tile_mjai,
+                "consumed": list(consumed_mjai),
+            }
+        )
     
     # def _update_info_from_bot(self):
     #     if self.is_round_started:
@@ -440,6 +483,8 @@ class GameState:
                     'tsumogiri': tsumogiri
                 }
             )
+            if 0 <= actor < len(self.kyoku_state.rivers):
+                self.kyoku_state.rivers[actor].append(tile_mjai)
                 
             return self._react_all(liqi_data_data)        
         
@@ -466,37 +511,58 @@ class GameState:
             match liqi_data_data['type']:
                 case ChiPengGang.Chi:
                     assert len(consumed_mjai) == 2
-                    self.mjai_pending_input_msgs.append(
-                        {
+                    call_msg = {
                             'type': MjaiType.CHI,
                             'actor': actor,
                             'target': target,
                             'pai': tile_mjai,
                             'consumed': consumed_mjai
                         }
-                    )
+                    self.mjai_pending_input_msgs.append(call_msg)
+                    if actor == self.seat:
+                        self._record_my_call(
+                            {
+                                'type': 'chi',
+                                'pai': tile_mjai,
+                                'consumed': list(consumed_mjai),
+                            }
+                        )
                 case ChiPengGang.Peng:
                     assert len(consumed_mjai) == 2
-                    self.mjai_pending_input_msgs.append(
-                        {
+                    call_msg = {
                             'type': MjaiType.PON,
                             'actor': actor,
                             'target': target,
                             'pai': tile_mjai,
                             'consumed': consumed_mjai
                         }
-                    )
+                    self.mjai_pending_input_msgs.append(call_msg)
+                    if actor == self.seat:
+                        self._record_my_call(
+                            {
+                                'type': 'pon',
+                                'pai': tile_mjai,
+                                'consumed': list(consumed_mjai),
+                            }
+                        )
                 case ChiPengGang.Gang:
                     assert len(consumed_mjai) == 3
-                    self.mjai_pending_input_msgs.append(
-                        {
+                    call_msg = {
                             'type': MjaiType.DAIMINKAN,
                             'actor': actor,
                             'target': target,
                             'pai': tile_mjai,
                             'consumed': consumed_mjai
                         }
-                    )
+                    self.mjai_pending_input_msgs.append(call_msg)
+                    if actor == self.seat:
+                        self._record_my_call(
+                            {
+                                'type': 'daiminkan',
+                                'pai': tile_mjai,
+                                'consumed': list(consumed_mjai),
+                            }
+                        )
                 case _:
                     raise ValueError(f"Unknown ChiPengGang type {liqi_data_data['type']}")
             return self._react_all(liqi_data_data)
@@ -516,7 +582,13 @@ class GameState:
                         self.kyoku_state.my_tsumohai = None
                         for c in consumed_mjai:
                             self.kyoku_state.my_tehai.remove(c)
-                        self.kyoku_state.my_tehai = mj_helper.sort_mjai_tiles(self.kyoku_state.my_tehai)                        
+                        self.kyoku_state.my_tehai = mj_helper.sort_mjai_tiles(self.kyoku_state.my_tehai)
+                        self._record_my_call(
+                            {
+                                'type': 'ankan',
+                                'consumed': list(consumed_mjai),
+                            }
+                        )
 
                     self.mjai_pending_input_msgs.append(
                         {
@@ -536,6 +608,7 @@ class GameState:
                         self.kyoku_state.my_tsumohai = None
                         self.kyoku_state.my_tehai.remove(tile_mjai)
                         self.kyoku_state.my_tehai = mj_helper.sort_mjai_tiles(self.kyoku_state.my_tehai)
+                        self._upgrade_pon_to_kakan(tile_mjai, consumed_mjai)
                         
                     self.mjai_pending_input_msgs.append(
                         {

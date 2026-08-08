@@ -19,7 +19,9 @@ from common.log_helper import LOGGER
 from common.settings import Settings
 from common.lan_str import LanStr
 from common import utils
-from common.utils import FPSCounter
+from common.utils import FPSCounter, MAJSOUL_DOMAINS
+from common.macos_proxy import MacOSProxySession, SafariProxyError, manual_disable_hint
+from common.safari_reconnect import SafariReconnectError, quit_safari_and_open
 from bot import Bot, get_bot
 from sensei_adapter import SenseiCoach, WhyResult, SENSEI_AVAILABLE
 from sensei_mode import PRACTICE_BANNER, ModePolicy, classify_mode
@@ -40,11 +42,16 @@ class BotManager:
         self.game_state:GameState = None
 
         self.liqi_parser = liqi.LiqiProto()
-        self.mitm_server:mitm.MitmController = mitm.MitmController()      # no domain restrictions for now
+        # Safari mode: restrict WS intercept to Majsoul domains; Chromium path stays open
+        domains = list(MAJSOUL_DOMAINS) if self.st.safari_mode else None
+        self.mitm_server: mitm.MitmController = mitm.MitmController(
+            allowed_domains=domains
+        )
         self.proxy_injector = proxinject.ProxyInjector()
         self.browser = GameBrowser(self.st.browser_width, self.st.browser_height)
         self.automation = Automation(self.browser, self.st)
         self.bot:Bot = None
+        self.safari_proxy: MacOSProxySession | None = None
 
         self._thread:threading.Thread = None
         self._stop_event = threading.Event()
@@ -128,9 +135,26 @@ class BotManager:
         
     def start_browser(self):
         """ Start the browser thread, open browser window """
+        if self.st.safari_mode:
+            LOGGER.warning("start_browser ignored: safari_mode is on (companion-only)")
+            return
         ms_url = self.st.ms_url
         proxy = self.mitm_server.proxy_str
         self.browser.start(ms_url, proxy, self.st.browser_width, self.st.browser_height, self.st.enable_chrome_ext)
+
+    def reconnect_safari_client(self) -> None:
+        """Quit Safari, reopen Majsoul, and reset stale proxy client state."""
+        if not self.st.safari_mode:
+            raise SafariReconnectError(
+                "Safari reconnect is only available in Safari companion mode."
+            )
+        self.lobby_flow_id = None
+        self.game_flow_id = None
+        if self.game_state:
+            self._process_end_game()
+        else:
+            self.game_exception = None
+        quit_safari_and_open(self.st.ms_url)
     
     def is_browser_zoom_off(self):
         """ check browser zoom level, return true if zoomlevel is not 1"""
@@ -192,13 +216,36 @@ class BotManager:
     def get_status_line(self) -> str | None:
         return self.sensei.last_status_line
 
+    def get_aiming_for(self) -> str | None:
+        return self.sensei.last_aiming_for
+
+    def get_reason_log(self) -> list:
+        return self.sensei.reason_log
+
+    def refresh_board_features(self) -> None:
+        """Update Aiming-for / status from current hand and rivers."""
+        gi = self.get_game_info()
+        reaction = self.get_pending_reaction()
+        self.sensei.refresh_board_features(
+            gi,
+            self.game_state,
+            reaction,
+            known_terms=list(self.st.known_terms),
+        )
+
     def explain_why_now(self) -> WhyResult:
         """Synchronously explain current pending reaction (for GUI button)."""
         mode = self.get_mode_verdict()
         reaction = self.get_pending_reaction()
         gi = self.get_game_info()
         result = self.sensei.explain_why(
-            reaction, gi, self.game_state, mode, use_llm=None
+            reaction,
+            gi,
+            self.game_state,
+            mode,
+            use_llm=None,
+            include_score_tips=bool(self.st.score_tips),
+            known_terms=list(self.st.known_terms),
         )
         return result
         
@@ -217,6 +264,22 @@ class BotManager:
     
     def update_overlay(self):
         """ update the overlay if conditions are met"""
+        reaction = self.get_pending_reaction()
+        gi = self.get_game_info()
+        why_current = self.sensei.sync_with_reaction(
+            reaction,
+            gi,
+            include_score_tips=bool(self.st.score_tips),
+            known_terms=list(self.st.known_terms),
+        )
+        self.refresh_board_features()
+        if (
+            not why_current
+            and reaction
+            and self.st.auto_why
+            and self.why_enabled()
+        ):
+            self._why_request = True
         if self._why_request:
             self._why_request = False
             self.explain_why_now()
@@ -272,7 +335,7 @@ class BotManager:
     def _create_mitm_and_proxinject(self):
         # create mitm and proxinject threads
         # enable proxyinject requires socks5, which disables upstream proxy
-        if self.st.enable_proxinject:
+        if self.st.enable_proxinject and not self.st.safari_mode:
             mode = mitm.SOCKS5
             LOGGER.debug("Enabling proxyinject requires socks5, and it disables upstream proxy")
         else:
@@ -283,15 +346,38 @@ class BotManager:
         if not res:
             self.main_thread_exception = utils.MitmCertNotInstalled(self.mitm_server.cert_file)
         
-        if self.st.enable_proxinject:
+        if self.st.enable_proxinject and not self.st.safari_mode:
             self.proxy_injector.start(self.st.inject_process_name, "127.0.0.1", self.st.mitm_port)
+
+    def _enable_safari_proxy(self):
+        """Apply Majsoul-only PAC to local mitm (macOS Safari companion path)."""
+        self.safari_proxy = MacOSProxySession(
+            mitm_port=self.st.mitm_port,
+            domains=list(MAJSOUL_DOMAINS),
+        )
+        self.safari_proxy.enable()
+
+    def _disable_safari_proxy(self):
+        if self.safari_proxy is not None:
+            try:
+                self.safari_proxy.disable()
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                LOGGER.warning("Safari PAC cleanup failed: %s", e)
+                LOGGER.warning("%s", manual_disable_hint())
+            self.safari_proxy = None
         
 
     def _run(self):
         """ Keep running the main loop (blocking)"""
         try:
             self._create_mitm_and_proxinject()
-            if self.st.auto_launch_browser:
+            if self.st.safari_mode:
+                try:
+                    self._enable_safari_proxy()
+                except SafariProxyError as e:
+                    LOGGER.error("Safari proxy enable failed: %s", e)
+                    self.main_thread_exception = e
+            elif self.st.auto_launch_browser:
                 self.start_browser()
 
             while self._stop_event.is_set() is False:   # thread main loop
@@ -309,6 +395,8 @@ class BotManager:
                 self._loop_post_msg()
                                     
             # loop ended, clean up before exit
+            LOGGER.info("Disabling Safari PAC if active")
+            self._disable_safari_proxy()
             LOGGER.info("Shutting down browser")
             self.browser.stop(True)                
             LOGGER.info("Shutting down MITM")
@@ -321,6 +409,7 @@ class BotManager:
         except Exception as e:
             self.main_thread_exception = e
             LOGGER.error("Bot Manager Thread Exception: %s", e, exc_info=True)
+            self._disable_safari_proxy()
             
     
     def _loop_pre_msg(self):
@@ -349,8 +438,12 @@ class BotManager:
             if isinstance(self.game_exception, utils.MITMException):
                 self.game_exception = None
                 
-        # check overlay
-        if self.browser and self.browser.is_page_normal():
+        # check overlay (Chromium only; Safari companion has no in-page HUD)
+        if (
+            not self.st.safari_mode
+            and self.browser
+            and self.browser.is_page_normal()
+        ):
             if self.st.enable_overlay:
                 if self.browser.is_overlay_working() is False:
                     LOGGER.debug("Bot manager attempting turning on browser overlay")
@@ -460,6 +553,7 @@ class BotManager:
         # self.game_flow_id = None
         self.game_state = None
         self.sensei.clear()
+        self.sensei.refresh_board_features(None, None, None)  # clears reason log + aiming
         if self.browser:    # fix for corner case
             self.browser.overlay_clear_guidance()
         self.game_exception = None

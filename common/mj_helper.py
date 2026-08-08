@@ -273,6 +273,8 @@ class GameInfo:
     self_seat:int = None            # self seat index
     player_reached:list[bool] = field(default_factory=lambda: [False]*4)  # players in REACH state
     is_first_round:bool = False     # if self first round has not passed
+    # Sensei-shaped open melds (chi/pon/kan); empty when menzen
+    my_calls:list = field(default_factory=list)
     
     def n_other_reach(self) -> int:
         """ number of other players in reach state"""
