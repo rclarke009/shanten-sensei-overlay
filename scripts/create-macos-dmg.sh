@@ -20,6 +20,8 @@ mkdir -p "${STAGING}"
 cp -R "${APP_PATH}" "${STAGING}/"
 cp licenses/MORTAL_MODEL_NOTICE.md "${STAGING}/Model-License-AGPL.txt"
 cp licenses/README.md "${STAGING}/Third-Party-Licenses.txt"
+cp scripts/Install-Shanten-Sensei.command "${STAGING}/Install Shanten Sensei.command"
+chmod +x "${STAGING}/Install Shanten Sensei.command"
 
 hdiutil create -volname "Shanten Sensei" -srcfolder "${STAGING}" -ov -format UDZO "${DMG_PATH}"
 shasum -a 256 "${DMG_PATH}" > "${DMG_PATH}.sha256"

@@ -37,12 +37,16 @@ jobs:
       - name: Create DMG
         run: bash scripts/create-macos-dmg.sh
 
+      - name: Package one-click installer zip
+        run: bash scripts/package-installer-zip.sh
+
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           files: |
+            dist/Install-Shanten-Sensei.zip
             scripts/Install-Shanten-Sensei.command
             dist/ShantenSensei-macOS.dmg
             dist/ShantenSensei-macOS.dmg.sha256

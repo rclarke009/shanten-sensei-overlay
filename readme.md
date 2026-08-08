@@ -16,7 +16,7 @@ Explainer library (separate repo, Apache-2.0): [shanten_sensei](https://github.c
 
 | Method | Link |
 |--------|------|
-| **One-click install** | [Install-Shanten-Sensei.command](https://github.com/rclarke009/shanten-sensei-overlay/releases/latest) |
+| **One-click install** | [Install-Shanten-Sensei.zip](https://github.com/rclarke009/shanten-sensei-overlay/releases/latest) |
 | **Release .dmg** | [Releases](https://github.com/rclarke009/shanten-sensei-overlay/releases) |
 | **Install guide** | [INSTALL.md](INSTALL.md) |
 | **One-click script** | Double-click `scripts/install-macos.command` after cloning this repo |

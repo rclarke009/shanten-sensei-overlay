@@ -5,14 +5,19 @@ Practice / friend / vs-AI only — **not for ranked**.
 ## Option A — One-click install (recommended)
 
 1. Open [Releases](https://github.com/rclarke009/shanten-sensei-overlay/releases/latest).
-2. Download **`Install-Shanten-Sensei.command`** only (ignore the other files unless you want license text).
-3. Double-click it in Finder.
-   - First time: if macOS blocks the script, right-click → **Open** → **Open** again.
-4. The installer uses a `.dmg` from your Downloads folder if you already downloaded one; otherwise it fetches the latest release automatically, installs **Shanten Sensei** to `~/Applications/`, and opens the app.
-5. Complete the **first-run wizard** (practice acknowledgment, bundled Mortal model, Safari companion, optional API key).
-6. Play Majsoul in **Safari**, join friend / practice / vs-AI, and press **Why?**.
+2. Download **`Install-Shanten-Sensei.zip`** (not the raw `.command` — GitHub strips execute permission).
+3. Double-click the zip to unzip, then double-click **`Install-Shanten-Sensei.command`**.
+   - If macOS blocks the script: right-click → **Open** → **Open** again.
+4. The installer uses a `.dmg` from Downloads if present; otherwise it downloads the latest release, installs to `~/Applications/`, and opens the app.
+5. Complete the **first-run wizard**, then play Majsoul in **Safari** and press **Why?**.
 
-**Manual install:** download `ShantenSensei-macOS.dmg` instead, open it, drag **Shanten Sensei** to Applications.
+**Already have the `.dmg`?** Open it and double-click **`Install Shanten Sensei.command`** on the disk image (permissions are preserved there).
+
+**Terminal fallback** (if double-click still fails):
+
+```bash
+bash ~/Downloads/Install-Shanten-Sensei.command
+```
 
 License files: on the DMG (`Model-License-AGPL.txt`) and in the app under `licenses/`. See [licenses/MORTAL_MODEL_NOTICE.md](licenses/MORTAL_MODEL_NOTICE.md).
 
