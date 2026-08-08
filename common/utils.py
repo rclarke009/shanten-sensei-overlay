@@ -40,6 +40,17 @@ class Folder:
     CHROME_EXT = 'chrome_ext'
 
 
+# Writable at runtime (outside PyInstaller Resources/).
+_RUNTIME_FOLDERS = frozenset({
+    ".",
+    Folder.LOG,
+    Folder.MITM_CONF,
+    Folder.BROWSER_DATA,
+    Folder.TEMP,
+    Folder.UPDATE,
+})
+
+
 class GameClientType(Enum):
     """ Game client type"""
     PLAYWRIGHT = auto()     # playwright browser
@@ -113,15 +124,18 @@ def sub_folder(folder_name:str) -> pathlib.Path:
 
         return models_data_dir()
 
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = pathlib.Path(sys._MEIPASS).parent   # pylint: disable=W0212,E1101
-    except Exception:  #pylint: disable=broad-except
+    if getattr(sys, "frozen", False):
+        meipass = pathlib.Path(sys._MEIPASS)  # pylint: disable=no-member
+        if folder_name in _RUNTIME_FOLDERS:
+            base_path = meipass.parent
+        else:
+            base_path = meipass
+    else:
         base_path = pathlib.Path('.')
-        
+
     subfolder = base_path / folder_name
-    if not subfolder.exists():
-        subfolder.mkdir(exist_ok=True)
+    if folder_name in _RUNTIME_FOLDERS and not subfolder.exists():
+        subfolder.mkdir(parents=True, exist_ok=True)
     return subfolder.resolve()
 
 
