@@ -2,19 +2,19 @@
 
 Practice / friend / vs-AI only — **not for ranked**.
 
-## Option A — Download (recommended when available)
+## Option A — One-click install (recommended)
 
-1. Open [Shanten Sensei overlay Releases](https://github.com/rclarke009/shanten-sensei-overlay/releases) and download the latest **ShantenSensei-macOS.dmg**.
-2. Open the DMG and drag **Shanten Sensei** to Applications.
-3. First launch: if macOS blocks an unsigned build, right-click the app → **Open** → confirm.
-4. Complete the **first-run wizard**:
-   - Confirm practice-only use
-   - The release includes a **bundled Mortal model** (`mortal_298k`, AGPL-3.0) — no separate download required
-   - Keep **Safari companion** enabled (default)
-   - Optional: paste an OpenAI API key for LLM **Why?** text
-5. Open Majsoul in **Safari** (`https://mahjongsoul.game.yo-star.com/`), join friend / practice / vs-AI, and press **Why?** in the coach window.
+1. Open [Releases](https://github.com/rclarke009/shanten-sensei-overlay/releases/latest).
+2. Download **`Install-Shanten-Sensei.command`** only (ignore the other files unless you want license text).
+3. Double-click it in Finder.
+   - First time: if macOS blocks the script, right-click → **Open** → **Open** again.
+4. The installer uses a `.dmg` from your Downloads folder if you already downloaded one; otherwise it fetches the latest release automatically, installs **Shanten Sensei** to `~/Applications/`, and opens the app.
+5. Complete the **first-run wizard** (practice acknowledgment, bundled Mortal model, Safari companion, optional API key).
+6. Play Majsoul in **Safari**, join friend / practice / vs-AI, and press **Why?**.
 
-License files are on the DMG (`Model-License-AGPL.txt`) and in the app under `licenses/`. See [licenses/MORTAL_MODEL_NOTICE.md](licenses/MORTAL_MODEL_NOTICE.md).
+**Manual install:** download `ShantenSensei-macOS.dmg` instead, open it, drag **Shanten Sensei** to Applications.
+
+License files: on the DMG (`Model-License-AGPL.txt`) and in the app under `licenses/`. See [licenses/MORTAL_MODEL_NOTICE.md](licenses/MORTAL_MODEL_NOTICE.md).
 
 Quit the app when done — it turns off the Safari proxy. If browsing breaks after a crash, see [proxy trust precautions](proxy-trust-precautions.md).
 

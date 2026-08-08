@@ -43,6 +43,7 @@ jobs:
         with:
           generate_release_notes: true
           files: |
+            scripts/Install-Shanten-Sensei.command
             dist/ShantenSensei-macOS.dmg
             dist/ShantenSensei-macOS.dmg.sha256
             INSTALL.md
