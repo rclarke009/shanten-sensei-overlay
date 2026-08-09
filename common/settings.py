@@ -118,10 +118,8 @@ class Settings:
         self.always_on_top: bool = self._get_value(
             "always_on_top", False, self.valid_bool
         )
-        # Collapse setup toolbars (actions + Overlay/Autoplay/Join) during play
-        self.hide_toolbars: bool = self._get_value(
-            "hide_toolbars", False, self.valid_bool
-        )
+        # Session-only: collapse setup toolbars during play (not persisted across launches)
+        self.hide_toolbars: bool = False
         # First-run wizard completed (model, Safari, optional API key)
         self.setup_complete: bool = self._get_value(
             "setup_complete", False, self.valid_bool
@@ -150,8 +148,13 @@ class Settings:
     def save_json(self):
         """ Save settings into json file"""
         # save all non-private variables (not starting with "_") into dict
-        settings_to_save = {key: value for key, value in self.__dict__.items()
-                            if not key.startswith('_') and not callable(value)}
+        settings_to_save = {
+            key: value
+            for key, value in self.__dict__.items()
+            if not key.startswith('_')
+            and not callable(value)
+            and key != "hide_toolbars"
+        }
         with open(self._settings_path, 'w', encoding='utf-8') as file:
             json.dump(settings_to_save, file, indent=4, separators=(', ', ': '))
     

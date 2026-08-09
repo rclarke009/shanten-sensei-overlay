@@ -302,7 +302,7 @@ TOOLBAR_COLLAPSE_DELTA = 156
 
 def window_size(hide_ai_options: bool, hide_toolbars: bool = False) -> tuple[int, int]:
     """Base coaching window size; shrink when setup toolbars are collapsed."""
-    width, height = (480, 520) if hide_ai_options else (620, 620)
+    width, height = (480, 620) if hide_ai_options else (620, 620)
     if hide_toolbars:
         height = max(height - TOOLBAR_COLLAPSE_DELTA, 300)
     return width, height

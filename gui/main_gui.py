@@ -37,7 +37,7 @@ class MainGUI(tk.Tk):
         self.iconphoto(True, icon)
         self.protocol("WM_DELETE_WINDOW", self._on_exit)        # confirmation before close window  
         default_size, min_size = self._window_sizes(
-            self.st.hide_ai_options, self.st.hide_toolbars
+            self.st.hide_ai_options, hide_toolbars=False
         )
         self.geometry(f"{default_size[0]}x{default_size[1]}")
         self.minsize(*min_size)
@@ -168,8 +168,8 @@ class MainGUI(tk.Tk):
         self.timer.pack(**pack_args)
         self.tb2.add_sep()
 
-        # Honor saved collapse state (and keep header label in sync)
-        self._set_toolbars_visible(not self.st.hide_toolbars, persist=False)
+        # Always start with Controls expanded (session collapse only; not persisted)
+        self._set_toolbars_visible(True)
                
         # === practice banner ===
         cur_row += 1
@@ -265,7 +265,7 @@ class MainGUI(tk.Tk):
         self.why_row.grid(row=cur_row, column=0, sticky=tk.NSEW, padx=5, pady=2)
         self.why_row.grid_columnconfigure(1, weight=1)
         self.why_row.grid_rowconfigure(0, weight=1)
-        self.grid_frame.grid_rowconfigure(cur_row, weight=2)
+        self.grid_frame.grid_rowconfigure(cur_row, weight=2, minsize=110)
 
         self._yakuman_img_idle = tk.PhotoImage(
             file=sub_file(Folder.RES, "yakuman_idle.png")
@@ -390,6 +390,16 @@ class MainGUI(tk.Tk):
         self.unbind("<Configure>")
         self.bind("<Configure>", self._on_root_configure)
         self.after_idle(self._adapt_layout_height)
+        self.after_idle(self._apply_startup_geometry)
+
+    def _apply_startup_geometry(self) -> None:
+        """Apply window size after widgets are laid out (macOS/tk needs post-layout geometry)."""
+        self.update_idletasks()
+        size, min_size = self._window_sizes(
+            self.st.hide_ai_options, self.st.hide_toolbars
+        )
+        self.minsize(*min_size)
+        self.geometry(f"{size[0]}x{size[1]}")
 
     @staticmethod
     def _window_sizes(
@@ -415,13 +425,11 @@ class MainGUI(tk.Tk):
         else:
             self.btn_controls.config(text=self.st.lan().CONTROLS_HIDE)
 
-    def _set_toolbars_visible(self, visible: bool, *, persist: bool = True) -> None:
+    def _set_toolbars_visible(self, visible: bool) -> None:
         """Show or hide the two setup toolbar rows; keep coaching panels."""
         hide = not visible
         changed = self.st.hide_toolbars != hide
         self.st.hide_toolbars = hide
-        if persist and changed:
-            self.st.save_json()
 
         if visible:
             self.toolbar.grid(row=self._toolbar_row, **self._toolbar_grid_args)
@@ -431,13 +439,13 @@ class MainGUI(tk.Tk):
             self.tb2.grid_remove()
 
         self._update_controls_header()
-        if changed or not persist:
+        if changed:
             self._apply_window_size()
 
     def _on_controls_toggle(self) -> None:
         visible = self.st.hide_toolbars  # currently hidden → show
         self._toolbar_user_override = visible
-        self._set_toolbars_visible(visible, persist=True)
+        self._set_toolbars_visible(visible)
 
     def _maybe_auto_collapse_toolbars(self) -> None:
         """Collapse in-game / expand in lobby unless user overrode this session."""
@@ -451,7 +459,7 @@ class MainGUI(tk.Tk):
         if self._toolbar_user_override is not None:
             return
         # Entering game → hide; leaving game → show
-        self._set_toolbars_visible(not in_game, persist=True)
+        self._set_toolbars_visible(not in_game)
     
     def report_callback_exception(self, exc, val, tb):
         """ override exception handling: write to log"""
@@ -617,7 +625,7 @@ class MainGUI(tk.Tk):
         h = self.winfo_height()
         if h <= 1:
             return
-        preferred = 520 if self.st.hide_ai_options else 620
+        preferred = 620
         if self._reason_log_expanded:
             preferred += 120
         if h >= preferred - 50:
@@ -765,7 +773,9 @@ class MainGUI(tk.Tk):
         """ Clear UI compontes and rebuid widgets"""       
         for widget in self.winfo_children():
             widget.destroy()
-        default_size, min_size = self._window_sizes(self.st.hide_ai_options)
+        default_size, min_size = self._window_sizes(
+            self.st.hide_ai_options, self.st.hide_toolbars
+        )
         self.geometry(f"{default_size[0]}x{default_size[1]}")
         self.minsize(*min_size)
         self._reason_log_expanded = False

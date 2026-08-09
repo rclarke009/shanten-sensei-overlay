@@ -5,7 +5,7 @@ from common.lan_str import LanStr, LanStrZHS
 
 
 def test_window_size_compact_default():
-    assert window_size(True, False) == (480, 520)
+    assert window_size(True, False) == (480, 620)
 
 
 def test_window_size_full_default():
@@ -15,7 +15,7 @@ def test_window_size_full_default():
 def test_window_size_shrinks_when_toolbars_hidden():
     w, h = window_size(True, True)
     assert w == 480
-    assert h == 520 - TOOLBAR_COLLAPSE_DELTA
+    assert h == 620 - TOOLBAR_COLLAPSE_DELTA
     assert h >= 300
 
 
