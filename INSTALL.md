@@ -67,6 +67,8 @@ Restart the app after changing keys.
 
 | Symptom | Fix |
 |---------|-----|
+| Installer didn’t update / still old build | Re-run `Install-Shanten-Sensei.command` — it checks GitHub for the latest tag and re-downloads if your cached DMG is older. Or set `INSTALL_FORCE_DOWNLOAD=1` before running. |
+| Coach UI still Chinese after update | Quit the app fully (`Cmd+Q`), reopen; check **Settings → Language → English**. Majsoul in Safari has its own in-game language. |
 | No tips / not “Proxy Client” | Safari companion on; trust cert when prompted; quit Safari fully and reopen Majsoul |
 | Why? disabled | Ranked or unknown mode — use friend / practice |
 | Model error | Place `.pth` in `models/` via Settings or first-run wizard |

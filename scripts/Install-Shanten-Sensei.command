@@ -10,6 +10,7 @@ DMG_NAME="ShantenSensei-macOS.dmg"
 DOWNLOADS_DMG="${HOME}/Downloads/${DMG_NAME}"
 CACHE_DIR="${HOME}/Library/Caches/ShantenSensei"
 CACHE_DMG="${CACHE_DIR}/${DMG_NAME}"
+CACHE_TAG="${CACHE_DIR}/release_tag"
 MOUNT_POINT=""
 
 cleanup() {
@@ -23,32 +24,8 @@ pause() {
   read -r -p "Press Enter to close…" _
 }
 
-echo "=== Install Shanten Sensei ==="
-echo "Practice / friend / vs-AI only — not for ranked."
-echo ""
-
-if [[ "$(uname -s)" != "Darwin" ]]; then
-  echo "This installer is for macOS only." >&2
-  pause
-  exit 1
-fi
-
-choose_dmg() {
-  if [[ -f "${DOWNLOADS_DMG}" ]]; then
-    echo "Using DMG already in Downloads." >&2
-    echo "${DOWNLOADS_DMG}"
-    return
-  fi
-  if [[ -f "${CACHE_DMG}" ]]; then
-    echo "Using cached DMG." >&2
-    echo "${CACHE_DMG}"
-    return
-  fi
-
-  mkdir -p "${CACHE_DIR}"
-  echo "Finding latest release…" >&2
-  local meta
-  meta="$(python3 - <<'PY'
+fetch_latest_release() {
+  python3 - <<'PY'
 import json
 import sys
 import urllib.request
@@ -57,7 +34,7 @@ repo = "rclarke009/shanten-sensei-overlay"
 url = f"https://api.github.com/repos/{repo}/releases/latest"
 with urllib.request.urlopen(url, timeout=90) as resp:
     data = json.load(resp)
-tag = data.get("tag_name", "latest")
+tag = data.get("tag_name", "")
 for asset in data.get("assets", []):
     if asset.get("name") == "ShantenSensei-macOS.dmg":
         print(asset["browser_download_url"])
@@ -66,19 +43,46 @@ for asset in data.get("assets", []):
 else:
     sys.exit("No ShantenSensei-macOS.dmg in latest release")
 PY
-)" || {
+}
+
+cached_dmg_matches_tag() {
+  local tag="$1"
+  local path="$2"
+  local tag_file="$3"
+  [[ -f "${path}" && -f "${tag_file}" && "$(cat "${tag_file}")" == "${tag}" ]]
+}
+
+choose_dmg() {
+  echo "Finding latest release…" >&2
+  local meta url tag
+  meta="$(fetch_latest_release)" || {
     echo "Could not find a release DMG. Download ${DMG_NAME} manually from:" >&2
     echo "  https://github.com/${REPO}/releases/latest" >&2
     pause
     exit 1
   }
-
-  local url tag
   url="$(echo "${meta}" | sed -n '1p')"
   tag="$(echo "${meta}" | sed -n '2p')"
   echo "Latest release: ${tag}" >&2
+
+  if [[ "${INSTALL_FORCE_DOWNLOAD:-0}" == "1" ]]; then
+    echo "INSTALL_FORCE_DOWNLOAD=1 — downloading fresh copy." >&2
+  elif cached_dmg_matches_tag "${tag}" "${CACHE_DMG}" "${CACHE_TAG}"; then
+    echo "Using cached ${DMG_NAME} (${tag})." >&2
+    echo "${CACHE_DMG}"
+    return
+  elif cached_dmg_matches_tag "${tag}" "${DOWNLOADS_DMG}" "${HOME}/Downloads/.${DMG_NAME}.release_tag"; then
+    echo "Using ${DMG_NAME} from Downloads (${tag})." >&2
+    echo "${DOWNLOADS_DMG}"
+    return
+  elif [[ -f "${CACHE_DMG}" || -f "${DOWNLOADS_DMG}" ]]; then
+    echo "Cached DMG is older than ${tag}; downloading update…" >&2
+  fi
+
+  mkdir -p "${CACHE_DIR}"
   echo "Downloading ${DMG_NAME}…" >&2
   curl -fL --progress-bar "${url}" -o "${CACHE_DMG}"
+  printf '%s' "${tag}" > "${CACHE_TAG}"
   echo "${CACHE_DMG}"
 }
 
