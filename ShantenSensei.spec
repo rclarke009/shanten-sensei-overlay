@@ -88,7 +88,11 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=str(root / "resources" / "icon.ico") if (root / "resources" / "icon.ico").is_file() else None,
+    icon=str(
+        root / "resources" / ("icon.icns" if (root / "resources" / "icon.icns").is_file() else "icon.ico")
+    )
+    if (root / "resources" / "icon.icns").is_file() or (root / "resources" / "icon.ico").is_file()
+    else None,
 )
 coll = COLLECT(
     exe,
@@ -104,7 +108,11 @@ if sys.platform == "darwin":
     app = BUNDLE(
         coll,
         name="Shanten Sensei.app",
-        icon=str(root / "resources" / "icon.ico") if (root / "resources" / "icon.ico").is_file() else None,
+        icon=str(
+            root / "resources" / ("icon.icns" if (root / "resources" / "icon.icns").is_file() else "icon.ico")
+        )
+        if (root / "resources" / "icon.icns").is_file() or (root / "resources" / "icon.ico").is_file()
+        else None,
         bundle_identifier="com.shantensensei.overlay",
         info_plist={
             "NSHighResolutionCapable": True,
