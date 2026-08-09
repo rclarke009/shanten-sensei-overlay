@@ -84,6 +84,11 @@ chmod +x "${LAUNCHER}"
 # Minimal .app bundle
 rm -rf "${APP_PATH}"
 mkdir -p "${APP_PATH}/Contents/MacOS" "${APP_PATH}/Contents/Resources"
+BUNDLE_VERSION="$(cat "${REPO_DIR}/version" 2>/dev/null || echo 0.1.0)"
+ICON_SRC="${REPO_DIR}/resources/icon.icns"
+if [[ -f "${ICON_SRC}" ]]; then
+  cp "${ICON_SRC}" "${APP_PATH}/Contents/Resources/icon.icns"
+fi
 cat >"${APP_PATH}/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -98,7 +103,9 @@ cat >"${APP_PATH}/Contents/Info.plist" <<PLIST
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>0.1.0</string>
+  <string>${BUNDLE_VERSION}</string>
+  <key>CFBundleIconFile</key>
+  <string>icon.icns</string>
   <key>LSMinimumSystemVersion</key>
   <string>12.0</string>
   <key>NSHighResolutionCapable</key>
@@ -112,6 +119,12 @@ cat >"${APP_PATH}/Contents/MacOS/launcher" <<EOF
 exec "${LAUNCHER}"
 EOF
 chmod +x "${APP_PATH}/Contents/MacOS/launcher"
+
+touch "${APP_PATH}"
+LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+if [[ -x "${LSREGISTER}" ]]; then
+  "${LSREGISTER}" -f -R -trusted "${APP_PATH}" >/dev/null 2>&1 || true
+fi
 
 echo ""
 echo "=== Install complete ==="

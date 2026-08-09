@@ -126,6 +126,13 @@ rm -rf "${APP_PATH}"
 ditto "${SOURCE_APP}" "${APP_PATH}"
 xattr -dr com.apple.quarantine "${APP_PATH}" 2>/dev/null || true
 
+# macOS caches app icons by bundle id — refresh after replacing the .app
+touch "${APP_PATH}"
+LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+if [[ -x "${LSREGISTER}" ]]; then
+  "${LSREGISTER}" -f -R -trusted "${APP_PATH}" >/dev/null 2>&1 || true
+fi
+
 echo ""
 echo "Done! Opening Shanten Sensei…"
 echo ""
