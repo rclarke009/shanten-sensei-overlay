@@ -105,6 +105,8 @@ class Settings:
         self.auto_why: bool = self._get_value("auto_why", False, self.valid_bool)
         # Sensei: opt-in lead/trail/late-game point-situation tips (default off)
         self.score_tips: bool = self._get_value("score_tips", False, self.valid_bool)
+        # Sensei: opt-in physical-table call/riichi placement tips (default off)
+        self.table_tips: bool = self._get_value("table_tips", False, self.valid_bool)
         # Sensei: terms the player already knows (hide parenthetical definitions)
         raw_known = self._get_value("known_terms", [], self.valid_known_terms_list)
         self.known_terms: list = self._normalize_known_terms(raw_known)

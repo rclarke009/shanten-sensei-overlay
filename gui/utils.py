@@ -1,4 +1,5 @@
 """ GUI common/utility functions"""
+import sys
 import tkinter as tk
 from tkinter import ttk, font
 from PIL import Image, ImageDraw, ImageFont, ImageTk
@@ -181,6 +182,12 @@ class GuiStyle:
             "selectforeground": _DARK_TEXT,
         }
 
+    def tile_font_family(self) -> str:
+        """Font that includes the mahjong tile Unicode block (U+1F000)."""
+        if sys.platform == "darwin":
+            return "Apple Symbols"
+        return "Segoe UI Emoji"
+
     def font_normal(self, family:str=None, size:int=None):
         """ return normal font for gui/widgets"""
         if not family:
@@ -190,6 +197,10 @@ class GuiStyle:
         else:
             size = int(size / self.dpi_scale)        
         return (family, size)
+
+    def font_tile(self, size:int=None):
+        """Font for mahjong glyph + English labels (Why?, AI Guidance, hand)."""
+        return self.font_normal(self.tile_font_family(), size)
     
 
     def set_dpi_scaling(self, scale:float=1.0):

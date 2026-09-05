@@ -329,6 +329,8 @@ class StatusBar(tk.Frame):
         label = ttk.Label(column_frame, text=f'Column {index+1}', compound='left')  # Background color for label
         # label.image = icon  # Retain a reference to the image to prevent garbage collection
         label.image_file = "placeholder"
+        if index == self.n_cols - 1:
+            label.configure(wraplength=220, justify=tk.LEFT)
         label.pack(side=tk.LEFT, anchor='w')
         column_frame.label = label
 

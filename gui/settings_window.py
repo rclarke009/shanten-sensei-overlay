@@ -276,7 +276,11 @@ class SettingsWindow(tk.Toplevel):
         )
         auto_why_entry.grid(row=cur_row, column=0, columnspan=3, **args_entry)
 
-        # Sensei: Point situation tips
+        # Sensei: Advanced (point + real-table tips)
+        cur_row += 1
+        _label = ttk.Label(main_frame, text=self.st.lan().ADVANCED)
+        _label.grid(row=cur_row, column=0, **args_label)
+        args_adv = {"sticky": "w", "padx": (24, 3), "pady": (3, 2)}
         cur_row += 1
         self.score_tips_var = tk.BooleanVar(value=self.st.score_tips)
         score_tips_entry = ttk.Checkbutton(
@@ -285,7 +289,17 @@ class SettingsWindow(tk.Toplevel):
             text=self.st.lan().SCORE_TIPS,
             width=std_wid * 3,
         )
-        score_tips_entry.grid(row=cur_row, column=0, columnspan=3, **args_entry)
+        score_tips_entry.grid(row=cur_row, column=0, columnspan=3, **args_adv)
+
+        cur_row += 1
+        self.table_tips_var = tk.BooleanVar(value=self.st.table_tips)
+        table_tips_entry = ttk.Checkbutton(
+            main_frame,
+            variable=self.table_tips_var,
+            text=self.st.lan().TABLE_TIPS,
+            width=std_wid * 3,
+        )
+        table_tips_entry.grid(row=cur_row, column=0, columnspan=3, **args_adv)
 
         # Sensei: Terms I know…
         cur_row += 1
@@ -453,6 +467,7 @@ class SettingsWindow(tk.Toplevel):
             auto_why_new = True
         self.st.auto_why = auto_why_new
         self.st.score_tips = self.score_tips_var.get()
+        self.st.table_tips = self.table_tips_var.get()
         self.st.known_terms = self.st._normalize_known_terms(self._known_terms_draft)
         
         self.st.save_json()

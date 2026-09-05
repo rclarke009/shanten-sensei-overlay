@@ -24,6 +24,30 @@ pause() {
   read -r -p "Press Enter to close…" _
 }
 
+launched_from_finder() {
+  local parent
+  parent="$(ps -o comm= -p "$PPID" 2>/dev/null | sed 's/^-//' | tr -d '[:space:]')"
+  case "$parent" in
+    Terminal|login) return 0 ;;
+  esac
+  return 1
+}
+
+close_installer_window() {
+  if ! launched_from_finder; then
+    return 0
+  fi
+  local name
+  name="$(basename "$0")"
+  # Delay so this script can exit (and the EXIT trap can run) before the window closes.
+  osascript >/dev/null 2>&1 <<EOF &
+delay 0.8
+tell application "Terminal"
+  close (every window whose name contains "${name}") saving no
+end tell
+EOF
+}
+
 fetch_latest_release() {
   python3 - <<'PY'
 import json
@@ -136,11 +160,12 @@ fi
 echo ""
 echo "Done! Opening Shanten Sensei…"
 echo ""
-echo "First time only: if macOS warns the app is unsigned,"
-echo "  right-click Shanten Sensei → Open → Open again."
+echo "If macOS blocks the app, right-click Shanten Sensei → Open → Open again."
 echo ""
 echo "Then complete the setup wizard and play Majsoul in Safari."
 echo ""
 
+cleanup
+MOUNT_POINT=""
 open "${APP_PATH}" || true
-pause
+close_installer_window

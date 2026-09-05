@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate resources/icon.png and icon.ico from yakuman_idle.png."""
+"""Regenerate resources/icon.png, icon.ico, and icon.icns from yakuman_icon.png."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "resources"
-SRC = RES / "yakuman_idle.png"
+SRC = RES / "yakuman_icon.png"
 OUT_PNG = RES / "icon.png"
 OUT_ICO = RES / "icon.ico"
 OUT_ICNS = RES / "icon.icns"
@@ -19,9 +19,10 @@ ICONSET = RES / "icon.iconset"
 
 # Match the companion window / legacy app icon background.
 BG = (97, 209, 211, 255)
-# Pixels near yakuman_idle's flat backdrop become the icon background.
+# Pixels near yakuman sprites' flat backdrop become transparent.
 BG_TOLERANCE = 28
 ICON_SIZE = 400
+PAD_RATIO = 0.10
 ICO_SIZES = [(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
 ICNS_ICONSET = [
     ("icon_16x16.png", 16),
@@ -41,18 +42,38 @@ def _is_backdrop(r: int, g: int, b: int) -> bool:
     return abs(r - 22) <= BG_TOLERANCE and abs(g - 27) <= BG_TOLERANCE and abs(b - 33) <= BG_TOLERANCE
 
 
-def yakuman_to_icon(size: int = ICON_SIZE) -> Image.Image:
-    src = Image.open(SRC).convert("RGBA")
-    out = Image.new("RGBA", src.size, BG)
-    px = src.load()
+def _remove_backdrop(img: Image.Image) -> Image.Image:
+    out = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    px = img.load()
     dst = out.load()
-    for y in range(src.height):
-        for x in range(src.width):
+    for y in range(img.height):
+        for x in range(img.width):
             r, g, b, a = px[x, y]
-            if _is_backdrop(r, g, b):
+            if a < 128 or _is_backdrop(r, g, b):
                 continue
             dst[x, y] = (r, g, b, a)
-    return out.resize((size, size), Image.Resampling.LANCZOS)
+    return out
+
+
+def _trim_sprite(img: Image.Image) -> Image.Image:
+    bbox = img.getbbox()
+    if bbox is None:
+        return img
+    return img.crop(bbox)
+
+
+def yakuman_to_icon(size: int = ICON_SIZE) -> Image.Image:
+    src = _trim_sprite(_remove_backdrop(Image.open(SRC).convert("RGBA")))
+    canvas = Image.new("RGBA", (size, size), BG)
+    pad = int(size * PAD_RATIO)
+    inner = size - 2 * pad
+    scale = min(inner / src.width, inner / src.height)
+    scaled_w = max(1, int(src.width * scale))
+    scaled_h = max(1, int(src.height * scale))
+    scaled = src.resize((scaled_w, scaled_h), Image.Resampling.LANCZOS)
+    offset = ((size - scaled_w) // 2, (size - scaled_h) // 2)
+    canvas.paste(scaled, offset, scaled)
+    return canvas
 
 
 def write_ico(img: Image.Image) -> None:
@@ -68,8 +89,8 @@ def write_icns(img: Image.Image) -> None:
             child.unlink()
     else:
         ICONSET.mkdir()
-    for name, size in ICNS_ICONSET:
-        img.resize((size, size), Image.Resampling.LANCZOS).save(ICONSET / name)
+    for name, icns_size in ICNS_ICONSET:
+        img.resize((icns_size, icns_size), Image.Resampling.LANCZOS).save(ICONSET / name)
     subprocess.run(
         ["iconutil", "-c", "icns", str(ICONSET), "-o", str(OUT_ICNS)],
         check=True,

@@ -72,6 +72,41 @@ def test_quit_safari_and_open_raises_when_open_fails(monkeypatch):
         quit_safari_and_open("https://example.test/", run=run, sleep_fn=lambda _s: None)
 
 
+def test_reconnect_safari_client_enables_pac_if_missing(monkeypatch):
+    from bot_manager import BotManager
+    from common.settings import Settings
+
+    st = Settings()
+    st.safari_mode = True
+    st.ms_url = "https://mahjongsoul.game.yo-star.com/"
+    bm = BotManager(st)
+    bm.safari_proxy = None
+    enable = MagicMock()
+    monkeypatch.setattr(bm, "_enable_safari_proxy", enable)
+    monkeypatch.setattr("bot_manager.quit_safari_and_open", lambda _url: None)
+
+    bm.reconnect_safari_client()
+
+    enable.assert_called_once()
+
+
+def test_reconnect_safari_client_skips_pac_if_already_on(monkeypatch):
+    from bot_manager import BotManager
+    from common.settings import Settings
+
+    st = Settings()
+    st.safari_mode = True
+    bm = BotManager(st)
+    bm.safari_proxy = MagicMock()
+    enable = MagicMock()
+    monkeypatch.setattr(bm, "_enable_safari_proxy", enable)
+    monkeypatch.setattr("bot_manager.quit_safari_and_open", lambda _url: None)
+
+    bm.reconnect_safari_client()
+
+    enable.assert_not_called()
+
+
 def test_reconnect_safari_client_resets_flow_ids(monkeypatch):
     from bot_manager import BotManager
     from common.settings import Settings
@@ -91,6 +126,7 @@ def test_reconnect_safari_client_resets_flow_ids(monkeypatch):
 
     monkeypatch.setattr("bot_manager.quit_safari_and_open", fake_quit)
     monkeypatch.setattr(bm, "_process_end_game", MagicMock())
+    monkeypatch.setattr(bm, "_enable_safari_proxy", MagicMock())
 
     bm.reconnect_safari_client()
 

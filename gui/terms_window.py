@@ -9,17 +9,17 @@ from common.settings import Settings
 from .utils import GUI_STYLE
 
 
-def _checklist_items() -> list[tuple[str, str, str]]:
-    """Return (id, group, gloss) rows; fall back if Sensei missing."""
+def _checklist_items() -> list[tuple[str, str, str, str]]:
+    """Return (id, group, say, gloss) rows; fall back if Sensei missing."""
     try:
         from shanten_sensei.glosses import GLOSS_CHECKLIST
 
-        return [(i.id, i.group, i.gloss) for i in GLOSS_CHECKLIST]
+        return [(i.id, i.group, i.say, i.gloss) for i in GLOSS_CHECKLIST]
     except Exception:
         return [
-            ("ukeire", "Metrics", "tiles that improve the hand"),
-            ("shanten", "Metrics", "steps from ready"),
-            ("tanyao", "Yaku", "2–8 only; no 1/9, winds, or dragons"),
+            ("ukeire", "Metrics", "oo-KEH-reh", "tiles that improve the hand"),
+            ("shanten", "Metrics", "SHAHN-ten", "steps from ready"),
+            ("tanyao", "Yaku", "TAHN-yow", "2–8 only; no 1/9, winds, or dragons"),
         ]
 
 
@@ -41,8 +41,8 @@ class TermsWindow(tk.Toplevel):
 
         parent_x = parent.winfo_x()
         parent_y = parent.winfo_y()
-        self.geometry(f"420x520+{parent_x + 40}+{parent_y + 40}")
-        self.minsize(360, 420)
+        self.geometry(f"480x520+{parent_x + 40}+{parent_y + 40}")
+        self.minsize(420, 420)
         self.title(self.st.lan().KNOWN_TERMS)
 
         style = ttk.Style(self)
@@ -82,7 +82,7 @@ class TermsWindow(tk.Toplevel):
         known = set(seed)
         self._vars: dict[str, tk.BooleanVar] = {}
         current_group = None
-        for term_id, group, gloss in _checklist_items():
+        for term_id, group, say, gloss in _checklist_items():
             if group != current_group:
                 current_group = group
                 ttk.Label(inner, text=group).pack(anchor="w", pady=(10, 2))
@@ -91,7 +91,7 @@ class TermsWindow(tk.Toplevel):
             ttk.Checkbutton(
                 inner,
                 variable=var,
-                text=f"{term_id}  ({gloss})",
+                text=f"{term_id}  ·  {say}  ·  {gloss}",
             ).pack(anchor="w", padx=8)
 
         self.transient(parent)

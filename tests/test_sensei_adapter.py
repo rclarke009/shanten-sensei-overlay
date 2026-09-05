@@ -159,6 +159,24 @@ def test_score_tips_flag_busts_why_cache():
     assert coach.last_result is None
 
 
+def test_table_tips_flag_busts_why_cache():
+    coach = SenseiCoach()
+    reaction = {
+        "type": "dahai",
+        "pai": "9p",
+        "meta_options": [("9p", 0.8), ("5s", 0.2)],
+    }
+    gi = _gi()
+    friend = classify_mode(category=1, room_id=1)
+    result = coach.explain_why(
+        reaction, gi, None, friend, use_llm=False, include_table_tips=False
+    )
+    assert result.ok is True
+    assert coach.sync_with_reaction(reaction, gi, include_table_tips=False) is True
+    assert coach.sync_with_reaction(reaction, gi, include_table_tips=True) is False
+    assert coach.last_result is None
+
+
 def test_build_turn_with_open_calls_avoids_shanten_sentinel():
     reaction = {
         "type": "dahai",
@@ -213,3 +231,18 @@ def test_coach_skips_why_when_shanten_sentinel():
     assert "sync" in (result.error or "").lower()
     assert result.summary == ""
     assert result.status_line == "hand sync · status unavailable"
+
+
+def test_coach_skips_why_when_kan_tile_not_a_triplet():
+    coach = SenseiCoach()
+    reaction = {
+        "type": "kan_select",
+        "pai": "F",
+        "meta_options": [("kan_select", 0.9), ("none", 0.1)],
+    }
+    gi = _gi(my_tehai=LIVE_HAND_13 + ["F"], my_tsumohai=None)
+    friend = classify_mode(category=1, room_id=1)
+    result = coach.explain_why(reaction, gi, None, friend, use_llm=False)
+    assert result.ok is False
+    assert "kan" in (result.error or "").lower()
+    assert result.summary == ""

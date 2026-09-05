@@ -17,7 +17,8 @@ fi
 
 rm -rf "${STAGING}"
 mkdir -p "${STAGING}"
-cp -R "${APP_PATH}" "${STAGING}/"
+# ditto preserves the code signature; cp -R can strip it.
+ditto "${APP_PATH}" "${STAGING}/Shanten Sensei.app"
 cp licenses/MORTAL_MODEL_NOTICE.md "${STAGING}/Model-License-AGPL.txt"
 cp licenses/README.md "${STAGING}/Third-Party-Licenses.txt"
 cp scripts/Install-Shanten-Sensei.command "${STAGING}/Install Shanten Sensei.command"
