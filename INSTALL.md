@@ -4,22 +4,25 @@ Practice / friend / vs-AI only — **not for ranked**. Coaching (Why?, live tips
 
 **Defaults:** English overlay UI and the English YoStar Majsoul client (`mahjongsoul.game.yo-star.com`). The setup wizard and app updates re-apply these defaults. Change either in **Settings** if you prefer another language or client URL.
 
-## Option A — One-click install (recommended)
+## Option A — Disk image (recommended)
 
 1. Open [Releases](https://github.com/rclarke009/shanten-sensei-overlay/releases/latest).
-2. Download **`Install-Shanten-Sensei.zip`** (not the raw `.command` — GitHub strips execute permission).
-3. Double-click the zip to unzip, then double-click **`Install-Shanten-Sensei.command`**.
-   - If macOS blocks the script: right-click → **Open** → **Open** again.
-4. The installer uses a `.dmg` from Downloads if present; otherwise it downloads the latest release, installs to `~/Applications/`, and opens the app.
-5. Complete the **first-run wizard**, then play Majsoul in **Safari** and press **Why?**.
+2. Download **`ShantenSensei-macOS.dmg`**. Do **not** download the standalone `Install-Shanten-Sensei.command` from Assets (GitHub strips the execute bit, and macOS will block it).
+3. Open the disk image and drag **Shanten Sensei** to Applications (or `~/Applications`).
+4. Open the app, complete the **first-run wizard**, then play Majsoul in **Safari** and press **Why?**.
 
-**Already have the `.dmg`?** Open it and double-click **`Install Shanten Sensei.command`** on the disk image (permissions are preserved there).
+If you already have the `.dmg` in Downloads, use that. Skip the zip / `.command`.
 
-**Terminal fallback** (if double-click still fails):
+## Option B — Zip installer
 
-```bash
-bash ~/Downloads/Install-Shanten-Sensei.command
-```
+The zip auto-downloads the latest `.dmg` and installs to `~/Applications`. macOS often blocks the `.command` with **“… Not Opened”** and **Move to Trash** / **Done**. That is Gatekeeper, not a broken download.
+
+1. Download **`Install-Shanten-Sensei.zip`** (not the raw `.command`).
+2. Unzip, then **control-click** (right-click) **`Install-Shanten-Sensei.command`** → **Open** → **Open**.
+3. If you already double-clicked and only see **Move to Trash** / **Done**:
+   - Click **Done** (do not Move to Trash).
+   - **System Settings → Privacy & Security** → scroll to the blocked-script message → **Open Anyway**.
+4. Terminal fallback: `bash ~/Downloads/Install-Shanten-Sensei.command`
 
 License files: on the DMG (`Model-License-AGPL.txt`) and in the app under `licenses/`. See [licenses/MORTAL_MODEL_NOTICE.md](licenses/MORTAL_MODEL_NOTICE.md).
 
@@ -52,6 +55,7 @@ Restart the app after changing keys.
 
 | Symptom | Fix |
 |---------|-----|
+| **“… Not Opened”** / Apple could not verify / **Move to Trash** | Gatekeeper on the installer script. Prefer the `.dmg`. Or **Done** → **Privacy & Security** → **Open Anyway**. Do not Move to Trash. |
 | Installer didn’t update / still old build | Re-run `Install-Shanten-Sensei.command` — it checks GitHub for the latest tag and re-downloads if your cached DMG is older. Or set `INSTALL_FORCE_DOWNLOAD=1` before running. |
 | Coach UI still Chinese after update | Quit the app fully (`Cmd+Q`), reopen; check **Settings → Language → English**. Majsoul in Safari has its own in-game language. |
 | No tips / not “Proxy Client” | Safari companion on; trust cert when prompted; quit Safari fully and reopen Majsoul |

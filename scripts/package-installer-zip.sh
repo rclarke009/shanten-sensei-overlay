@@ -16,8 +16,12 @@ cat > "${README}" <<'EOF'
 Install Shanten Sensei (Mac)
 ============================
 
-1. Double-click Install-Shanten-Sensei.command
-2. If macOS blocks it: right-click → Open → Open again
+Prefer ShantenSensei-macOS.dmg from Releases (open it, drag the app).
+
+If you use this zip:
+1. Control-click Install-Shanten-Sensei.command → Open → Open
+2. If you see “Not Opened” / Move to Trash: click Done, then
+   System Settings → Privacy & Security → Open Anyway
 3. Finish the setup wizard, then play Majsoul in Safari (practice/friend)
 
 Practice / friend / vs-AI only — not for ranked.

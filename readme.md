@@ -16,8 +16,8 @@ Explainer library (separate repo, Apache-2.0): [shanten_sensei](https://github.c
 
 | Method | Link |
 |--------|------|
-| **Install (recommended)** | [Install-Shanten-Sensei.zip](https://github.com/rclarke009/shanten-sensei-overlay/releases/latest) |
-| **Release .dmg** | [Releases](https://github.com/rclarke009/shanten-sensei-overlay/releases) |
+| **Install (recommended)** | [ShantenSensei-macOS.dmg](https://github.com/rclarke009/shanten-sensei-overlay/releases/latest) |
+| **Zip installer** | [Install-Shanten-Sensei.zip](https://github.com/rclarke009/shanten-sensei-overlay/releases/latest) |
 | **Install guide** | [INSTALL.md](INSTALL.md) |
 
 Safari companion is the default (no Chromium download). First launch runs a setup wizard for your Mortal model and optional API key.
