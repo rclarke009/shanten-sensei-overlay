@@ -22,7 +22,7 @@ class LanStr:
     WHY_BUTTON = "Why?"
     STATUS_STRIP = "Hand status"
     PRACTICE_ONLY = "Practice / vs-AI / friend only — not for ranked"
-    WHY_DISABLED = "Why? disabled in this mode"
+    WHY_DISABLED = "Coaching disabled in this mode"
     SENSEI_EXPLAIN = "Yakuman says"
     YAKUMAN_INTRO = (
         "Hi, I'm Yakuman — you'll get that pun later. "
@@ -31,7 +31,9 @@ class LanStr:
     )
     YAKUMAN_BYE = "Nice hand work — see you next round. — Yakuman"
     AUTO_WHY = "Auto Why? (uses API each new tip)"
+    ADVANCED = "Advanced"
     SCORE_TIPS = "Point situation tips (lead / trail / late game)"
+    TABLE_TIPS = "Real table tips (how to pon/chi/riichi with physical tiles)"
     KNOWN_TERMS = "Terms I know…"
     KNOWN_TERMS_HINT = "Checked terms keep their names but hide definitions"
     HIDE_AI_OPTIONS = "Compact coach (hide AI % options)"
@@ -194,7 +196,7 @@ class LanStrZHS(LanStr):
     WHY_BUTTON = "为什么？"
     STATUS_STRIP = "手牌状态"
     PRACTICE_ONLY = "仅练习 / 人机 / 友人战 — 不可用于段位战"
-    WHY_DISABLED = "当前模式不可用为什么？"
+    WHY_DISABLED = "当前模式已关闭教练"
     SENSEI_EXPLAIN = "Yakuman 说"
     YAKUMAN_INTRO = (
         "嗨，我是 Yakuman——这个梗你一会儿就懂。 "
@@ -203,7 +205,9 @@ class LanStrZHS(LanStr):
     )
     YAKUMAN_BYE = "这局辛苦了——下局见。— Yakuman"
     AUTO_WHY = "自动为什么？（每次新提示调用 API）"
+    ADVANCED = "高级"
     SCORE_TIPS = "点数形势提示（领先 / 落后 / 残局）"
+    TABLE_TIPS = "实体牌桌提示（碰/吃/立直怎么摆）"
     KNOWN_TERMS = "已会术语…"
     KNOWN_TERMS_HINT = "勾选后保留术语名，隐藏括号释义"
     HIDE_AI_OPTIONS = "精简教练（隐藏 AI 选项百分比）"

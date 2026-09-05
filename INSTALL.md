@@ -1,6 +1,6 @@
 # Install Shanten Sensei on Mac
 
-Practice / friend / vs-AI only — **not for ranked**.
+Practice / friend / vs-AI only — **not for ranked**. Coaching (Why?, live tips) and Autoplay are disabled in ranked or unknown mode. Auto Join is off.
 
 **Defaults:** English overlay UI and the English YoStar Majsoul client (`mahjongsoul.game.yo-star.com`). The setup wizard and app updates re-apply these defaults. Change either in **Settings** if you prefer another language or client URL.
 
@@ -23,22 +23,7 @@ bash ~/Downloads/Install-Shanten-Sensei.command
 
 License files: on the DMG (`Model-License-AGPL.txt`) and in the app under `licenses/`. See [licenses/MORTAL_MODEL_NOTICE.md](licenses/MORTAL_MODEL_NOTICE.md).
 
-Quit the app when done — it turns off the Safari proxy. If browsing breaks after a crash, see [proxy trust precautions](proxy-trust-precautions.md).
-
-## Option B — One-click installer (from source)
-
-If no Release build is published yet:
-
-1. Install [Python 3.11](https://www.python.org/downloads/).
-2. Clone the overlay repo: `git clone https://github.com/rclarke009/shanten-sensei-overlay.git`
-3. Double-click **`scripts/install-macos.command`** in Finder (or run it in Terminal).
-4. Open **Shanten Sensei** from `~/Applications/` and finish the first-run wizard.
-
-The installer skips Chromium by default (Safari path). To also install Playwright Chromium:
-
-```bash
-INSTALL_CHROMIUM=1 ./scripts/install-macos.command
-```
+Quit the app when done — it turns off the Safari proxy. If browsing breaks after a crash, see [proxy trust precautions](https://github.com/rclarke009/shanten_sensei/blob/main/docs/proxy-trust-precautions.md).
 
 ## Mortal model
 
@@ -70,10 +55,10 @@ Restart the app after changing keys.
 | Installer didn’t update / still old build | Re-run `Install-Shanten-Sensei.command` — it checks GitHub for the latest tag and re-downloads if your cached DMG is older. Or set `INSTALL_FORCE_DOWNLOAD=1` before running. |
 | Coach UI still Chinese after update | Quit the app fully (`Cmd+Q`), reopen; check **Settings → Language → English**. Majsoul in Safari has its own in-game language. |
 | No tips / not “Proxy Client” | Safari companion on; trust cert when prompted; quit Safari fully and reopen Majsoul |
-| Why? disabled | Ranked or unknown mode — use friend / practice |
+| Coaching disabled | Ranked or unknown mode — use friend / practice. Autoplay and live tips are off too. |
 | Model error | Place `.pth` in `models/` via Settings or first-run wizard |
-| Browsing broken after crash | Turn off Auto Proxy in Network settings — see [proxy-trust-precautions.md](proxy-trust-precautions.md) |
+| Browsing broken after crash | Turn off Auto Proxy in Network settings — see [proxy-trust-precautions.md](https://github.com/rclarke009/shanten_sensei/blob/main/docs/proxy-trust-precautions.md) |
 
 ## Developers
 
-From-source setup (two repos, Chromium path, tests): [shanten_sensei live-setup.md](https://github.com/rclarke009/shanten_sensei/blob/main/docs/live-setup.md)
+From-source setup (clone repos, `scripts/install-macos.command`, Chromium path, tests): [shanten_sensei live-setup.md](https://github.com/rclarke009/shanten_sensei/blob/main/docs/live-setup.md)

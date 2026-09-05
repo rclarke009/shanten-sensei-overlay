@@ -93,7 +93,7 @@ class GameState:
         self.is_game_ended:bool = False         # if game has ended    
              
     def get_mode_verdict(self) -> ModeVerdict:
-        """Return practice/friend vs ranked policy for Why? coaching."""
+        """Return practice/friend vs ranked policy for live coaching."""
         if self.mode_verdict is not None:
             return self.mode_verdict
         return classify_mode(

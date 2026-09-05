@@ -171,6 +171,8 @@ class MainGUI(tk.Tk):
         # Always start with Controls expanded (session collapse only; not persisted)
         self._set_toolbars_visible(True)
                
+        wrap = 440 if self.st.hide_ai_options else 580
+
         # === practice banner ===
         cur_row += 1
         self._banner_row = cur_row
@@ -185,6 +187,8 @@ class MainGUI(tk.Tk):
             self.banner_frame,
             textvariable=self.banner_var,
             foreground=banner_fg,
+            wraplength=wrap,
+            justify=tk.LEFT,
         )
         self.banner_label.grid(row=0, column=0, sticky=tk.W)
         self.btn_reconnect_safari = ttk.Button(
@@ -193,8 +197,6 @@ class MainGUI(tk.Tk):
             command=self._on_reconnect_safari_clicked,
         )
         self.btn_reconnect_safari.grid(row=0, column=1, sticky=tk.E, padx=(8, 0))
-
-        wrap = 440 if self.st.hide_ai_options else 580
 
         # === Aiming for (always visible) + Yaku list + Why? button ===
         cur_row += 1
@@ -242,7 +244,7 @@ class MainGUI(tk.Tk):
         self.text_ai_guide = tk.Label(
             self.grid_frame,
             textvariable=self.ai_guide_var,
-            font=GUI_STYLE.font_normal("Segoe UI Emoji", 22),
+            font=GUI_STYLE.font_tile(22),
             height=5, anchor=tk.NW, justify=tk.LEFT,
             relief=tk.SUNKEN, padx=5, pady=5,
             **sunken,
@@ -284,7 +286,7 @@ class MainGUI(tk.Tk):
             self.why_row,
             height=why_height,
             wrap=tk.WORD,
-            font=GUI_STYLE.font_normal("Segoe UI Emoji", 14),
+            font=GUI_STYLE.font_tile(14),
             relief=tk.SUNKEN,
             padx=5,
             pady=5,
@@ -346,7 +348,7 @@ class MainGUI(tk.Tk):
             self.grid_frame,
             textvariable=self.gameinfo_var,
             height=2, anchor=tk.W, justify=tk.LEFT,
-            font=GUI_STYLE.font_normal("Segoe UI Emoji", 22),
+            font=GUI_STYLE.font_tile(22),
             relief=tk.SUNKEN, padx=5, pady=5,
             **sunken,
         )
@@ -366,7 +368,7 @@ class MainGUI(tk.Tk):
         self.text_status_strip = tk.Label(
             self.grid_frame,
             textvariable=self.status_strip_var,
-            height=1, anchor=tk.W, justify=tk.LEFT,
+            height=2, anchor=tk.NW, justify=tk.LEFT, wraplength=wrap,
             font=GUI_STYLE.font_normal("Segoe UI", 12),
             relief=tk.SUNKEN, padx=5, pady=3,
             **sunken,
@@ -499,16 +501,15 @@ class MainGUI(tk.Tk):
         self.switch_autoplay.switch_mid()
         if self.st.enable_automation:
             self.bot_manager.disable_automation()
-        else:
-            self.bot_manager.enable_automation()
+            return
+        if not self.bot_manager.enable_automation():
+            mode = self.bot_manager.get_mode_verdict()
+            self.banner_var.set(self.st.lan().WHY_DISABLED + f" — {mode.reason}")
             
 
     def _on_switch_autojoin_clicked(self):
-        self.switch_autojoin.switch_mid()
-        if self.st.auto_join_game:
-            self.bot_manager.disable_autojoin()
-        else:
-            self.bot_manager.enable_autojoin()
+        self.bot_manager.disable_autojoin()
+        self.switch_autojoin.switch_off()
 
     def _on_btn_yaku_list_clicked(self):
         """Open the illustrated yaku reference in the default browser."""
@@ -747,7 +748,8 @@ class MainGUI(tk.Tk):
                         error_to_str(error, lan),
                         parent=self,
                     )
-                self._update_gui()
+                # Tk.Tk.__getattr__ forwards missing names to Tcl — use the real updater.
+                self._update_gui_info_inner()
 
             self.after(0, _finish)
 
@@ -823,7 +825,7 @@ class MainGUI(tk.Tk):
         sw_list = [
             (self.switch_overlay, lambda: False if self.st.safari_mode else self.st.enable_overlay),
             (self.switch_autoplay, lambda: self.st.enable_automation),
-            (self.switch_autojoin, lambda: self.st.auto_join_game)
+            (self.switch_autojoin, lambda: False),
         ]
         for sw, func in sw_list:
             if func():
@@ -834,7 +836,7 @@ class MainGUI(tk.Tk):
         # Practice banner + Why? button state (+ Safari dual-window hint)
         mode = self.bot_manager.get_mode_verdict()
         client_type = self.bot_manager.get_game_client_type()
-        if self.bot_manager.is_in_game() and not mode.why_enabled:
+        if self.bot_manager.is_in_game() and not mode.assist_enabled:
             self.banner_var.set(self.st.lan().WHY_DISABLED + f" — {mode.reason}")
             self.btn_why.config(state=tk.DISABLED)
             self._safari_reconnect_waiting = False
@@ -876,7 +878,7 @@ class MainGUI(tk.Tk):
 
         # Update AI guide from Reaction (skip when compact coach hides options)
         pending_reaction = self.bot_manager.get_pending_reaction()
-        if self.st.hide_ai_options:
+        if self.st.hide_ai_options or not self.bot_manager.assist_enabled():
             self.ai_guide_var.set("")
         elif pending_reaction:
             ai_guide_str, options = mjai_reaction_2_guide(pending_reaction, 3, self.st.lan())
@@ -901,23 +903,30 @@ class MainGUI(tk.Tk):
         elif ended and self._yakuman_said_bye:
             pass  # keep goodbye until the next game
         else:
-            why = self.bot_manager.get_last_why()
-            if why and why.ok:
-                self._set_why_text(why.summary, pose="talk")
-            elif self._why_text == intro:
-                pass  # intro stays until the first tip
-            else:
+            if self.bot_manager.is_in_game() and not self.bot_manager.assist_enabled():
                 self._set_why_text("")
-        status = self.bot_manager.get_status_line()
-        if status:
-            self.status_strip_var.set(status)
-        else:
+            else:
+                why = self.bot_manager.get_last_why()
+                if why and why.ok:
+                    self._set_why_text(why.summary, pose="talk")
+                elif self._why_text == intro:
+                    pass  # intro stays until the first tip
+                else:
+                    self._set_why_text("")
+        if not self.bot_manager.assist_enabled():
             self.status_strip_var.set("")
-        aiming = self.bot_manager.get_aiming_for()
-        if aiming:
-            self.aiming_var.set(aiming)
-        else:
             self.aiming_var.set("")
+        else:
+            status = self.bot_manager.get_status_line()
+            if status:
+                self.status_strip_var.set(status)
+            else:
+                self.status_strip_var.set("")
+            aiming = self.bot_manager.get_aiming_for()
+            if aiming:
+                self.aiming_var.set(aiming)
+            else:
+                self.aiming_var.set("")
         self._sync_reason_log()
 
         # update game info: display tehai + tsumohai

@@ -24,7 +24,7 @@ from common.macos_proxy import MacOSProxySession, SafariProxyError, manual_disab
 from common.safari_reconnect import SafariReconnectError, quit_safari_and_open
 from bot import Bot, get_bot
 from sensei_adapter import SenseiCoach, WhyResult, SENSEI_AVAILABLE
-from sensei_mode import PRACTICE_BANNER, ModePolicy, classify_mode
+from sensei_mode import PRACTICE_BANNER, classify_mode
 
 
 METHODS_TO_IGNORE = [
@@ -67,6 +67,8 @@ class BotManager:
         self.game_exception:Exception = None            # game run time error (but does not break main thread)
         self.sensei = SenseiCoach()
         self._why_request: bool = False                 # GUI sets True to request on-demand Why?
+        # Copilot Auto Join queues ranked Bronze–Throne. Sensei never auto-joins.
+        self.st.auto_join_game = False
         
         
     def start(self):
@@ -148,6 +150,13 @@ class BotManager:
             raise SafariReconnectError(
                 "Safari reconnect is only available in Safari companion mode."
             )
+        # Settings can turn safari_mode on without a restart; PAC HTTP then never starts
+        # and Safari's leftover auto-proxy URL (port mitm+1) is a dead endpoint.
+        if self.safari_proxy is None:
+            try:
+                self._enable_safari_proxy()
+            except SafariProxyError as exc:
+                raise SafariReconnectError(str(exc)) from exc
         self.lobby_flow_id = None
         self.game_flow_id = None
         if self.game_state:
@@ -198,13 +207,23 @@ class BotManager:
             return None
 
     def get_mode_verdict(self):
-        """Practice/friend vs ranked gate for Why?."""
+        """Practice/friend vs ranked gate for live coaching."""
         if self.game_state:
             return self.game_state.get_mode_verdict()
         return classify_mode()
 
+    def assist_enabled(self) -> bool:
+        """HUD, aiming/status, Autoplay — allowed only in friend / practice."""
+        return self.get_mode_verdict().assist_enabled
+
     def why_enabled(self) -> bool:
-        return self.get_mode_verdict().why_enabled and SENSEI_AVAILABLE
+        return self.assist_enabled() and SENSEI_AVAILABLE
+
+    def apply_restricted_mode_lock(self) -> None:
+        """Force Autoplay off in ranked/unknown; Auto Join stays off."""
+        self.disable_autojoin()
+        if self.is_in_game() and not self.assist_enabled() and self.st.enable_automation:
+            self.disable_automation()
 
     def request_why(self) -> None:
         """Queue a Why? explanation (processed on bot thread / next overlay update)."""
@@ -224,6 +243,10 @@ class BotManager:
 
     def refresh_board_features(self) -> None:
         """Update Aiming-for / status from current hand and rivers."""
+        if not self.assist_enabled():
+            self.sensei.last_status_line = None
+            self.sensei.last_aiming_for = None
+            return
         gi = self.get_game_info()
         reaction = self.get_pending_reaction()
         self.sensei.refresh_board_features(
@@ -245,6 +268,7 @@ class BotManager:
             mode,
             use_llm=None,
             include_score_tips=bool(self.st.score_tips),
+            include_table_tips=bool(self.st.table_tips),
             known_terms=list(self.st.known_terms),
         )
         return result
@@ -270,6 +294,7 @@ class BotManager:
             reaction,
             gi,
             include_score_tips=bool(self.st.score_tips),
+            include_table_tips=bool(self.st.table_tips),
             known_terms=list(self.st.known_terms),
         )
         self.refresh_board_features()
@@ -288,11 +313,14 @@ class BotManager:
             self._update_overlay_botleft()
             
         
-    def enable_automation(self):
-        """ enable automation"""
+    def enable_automation(self) -> bool:
+        """Enable Autoplay. Refused in ranked/unknown games."""
+        if self.is_in_game() and not self.assist_enabled():
+            LOGGER.info("Autoplay refused: coaching disabled in this mode")
+            return False
         LOGGER.debug("Bot Manager enabling automation")
         self.st.enable_automation = True
-        self.automation.decide_lobby_action()
+        return True
         
         
     def disable_automation(self):
@@ -302,10 +330,11 @@ class BotManager:
         self.automation.stop_previous()
         
         
-    def enable_autojoin(self):
-        """ enable autojoin"""
-        LOGGER.debug("Enabling Auto Join")
-        self.st.auto_join_game = True
+    def enable_autojoin(self) -> bool:
+        """Auto Join queues ranked tables — never enabled for Sensei."""
+        LOGGER.info("Auto Join is disabled (not for ranked)")
+        self.disable_autojoin()
+        return False
         
         
     def disable_autojoin(self):
@@ -513,6 +542,7 @@ class BotManager:
                     self.game_state = GameState(self.bot)    # create game state with bot
                     self.game_state.input(liqimsg)      # authGame -> mjai:start_game, no reaction
                     self.game_exception = None
+                    self.apply_restricted_mode_lock()
                     self.automation.on_enter_game()
                 else:
                     LOGGER.warning("Game flow %s already started. ignoring new game flow %s", self.game_flow_id, msg.flow_id)
@@ -539,6 +569,8 @@ class BotManager:
                 
     def _process_idle_automation(self, liqimsg:dict):
         """ do some idle action based on liqi msg"""
+        if not self.assist_enabled():
+            return
         liqi_method = liqimsg['method']
         if liqi_method == liqi.LiqiMethod.NotifyGameBroadcast:  # reply to emoji
         # {'id': -1, 'type': <MsgType.Notify: 1>, 'method': '.lq.NotifyGameBroadcast',
@@ -572,6 +604,9 @@ class BotManager:
         
     def _update_overlay_guide(self):
         # Update overlay guide given pending reaction
+        if not self.assist_enabled():
+            self.browser.overlay_clear_guidance()
+            return
         reaction = self.get_pending_reaction()
         if reaction:
             guide, options = mjai_reaction_2_guide(reaction, 3, self.st.lan())
@@ -602,10 +637,10 @@ class BotManager:
         # mode / practice banner
         mode = self.get_mode_verdict()
         if self.is_in_game():
-            if mode.policy == ModePolicy.ALLOWED:
+            if mode.assist_enabled:
                 mode_line = PRACTICE_BANNER
             else:
-                mode_line = f"Why? disabled — {mode.reason}"
+                mode_line = f"{self.st.lan().WHY_DISABLED} — {mode.reason}"
         else:
             mode_line = PRACTICE_BANNER
 
@@ -626,21 +661,24 @@ class BotManager:
             line = self.st.lan().READY_FOR_GAME
 
         lines = [text, model_text, autoplay_text, mode_line, line]
-        status = self.sensei.last_status_line
-        if status:
-            lines.append(status)
-        why = self.sensei.last_result
-        if why and why.ok and why.summary:
-            lines.append("Why?: " + why.summary)
-        elif why and why.error:
-            lines.append("Why?: " + why.error)
+        if mode.assist_enabled:
+            status = self.sensei.last_status_line
+            if status:
+                lines.append(status)
+            why = self.sensei.last_result
+            if why and why.ok and why.summary:
+                lines.append("Why?: " + why.summary)
+            elif why and why.error:
+                lines.append("Why?: " + why.error)
 
         self.browser.overlay_update_botleft('\n'.join(lines))
 
     
     def _do_automation(self, reaction:dict):
-        # auto play given mjai reaction        
+        # auto play given mjai reaction
         if not reaction:    # no reaction given
+            return False
+        if not self.assist_enabled():
             return False
         
         try:

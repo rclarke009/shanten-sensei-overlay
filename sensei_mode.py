@@ -28,8 +28,13 @@ class ModeVerdict:
     room_id: int | None
 
     @property
-    def why_enabled(self) -> bool:
+    def assist_enabled(self) -> bool:
+        """Live coaching surfaces (HUD, Why?, aiming, Autoplay) are allowed."""
         return self.policy == ModePolicy.ALLOWED
+
+    @property
+    def why_enabled(self) -> bool:
+        return self.assist_enabled
 
 
 def _int_or_none(value: Any) -> int | None:
@@ -65,9 +70,9 @@ def classify_mode(
     category: int | None = None,
     room_id: int | None = None,
 ) -> ModeVerdict:
-    """Classify whether Why? coaching is allowed.
+    """Classify whether live coaching is allowed.
 
-    Rules (kickoff soft gate):
+    Rules (hard gate):
     - category 2 (ranked) → restricted
     - category 1 (friend) or room_id > 0 → allowed (covers friend + vs-AI in room)
     - everything else / unknown → restricted

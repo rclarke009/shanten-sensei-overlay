@@ -2,7 +2,7 @@
 
 Fork of [Mahjong Copilot](https://github.com/latorc/MahjongCopilot) with **Shanten Sensei** coaching: Mortal still recommends the move; Sensei explains **why** on demand.
 
-**Practice / friend / vs-AI only — not for ranked.**
+**Practice / friend / vs-AI only — not for ranked.** Coaching and Autoplay are disabled in ranked or unknown mode.
 
 Upstream Copilot docs and community: [mjcopilot.com](https://mjcopilot.com) · [Discord](https://discord.gg/7hcZYTFw5r)
 
@@ -12,14 +12,13 @@ Explainer library (separate repo, Apache-2.0): [shanten_sensei](https://github.c
 
 ## Download for Mac
 
-**Practice / friend / vs-AI only — not for ranked.**
+**Practice / friend / vs-AI only — not for ranked.** Coaching and Autoplay are disabled in ranked or unknown mode.
 
 | Method | Link |
 |--------|------|
-| **One-click install** | [Install-Shanten-Sensei.zip](https://github.com/rclarke009/shanten-sensei-overlay/releases/latest) |
+| **Install (recommended)** | [Install-Shanten-Sensei.zip](https://github.com/rclarke009/shanten-sensei-overlay/releases/latest) |
 | **Release .dmg** | [Releases](https://github.com/rclarke009/shanten-sensei-overlay/releases) |
 | **Install guide** | [INSTALL.md](INSTALL.md) |
-| **One-click script** | Double-click `scripts/install-macos.command` after cloning this repo |
 
 Safari companion is the default (no Chromium download). First launch runs a setup wizard for your Mortal model and optional API key.
 
@@ -73,7 +72,7 @@ python3.11 -m venv venv
 source venv/bin/activate          # Windows: venv\Scripts\activate
 python -m pip install -U pip
 pip install -r requirements.txt
-pip install 'shanten-sensei>=0.1.0'
+pip install 'shanten-sensei>=0.1.2'
 # Dev sibling: pip install -e ../shanten_sensei
 # Compat pins (torch 2.2 + mitmproxy 10.2):
 pip install 'numpy<2' 'httpx>=0.27,<0.28' 'httpcore>=1.0,<1.0.9' 'h11>=0.11,<0.15'

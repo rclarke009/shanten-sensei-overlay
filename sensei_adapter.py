@@ -56,8 +56,8 @@ except ImportError as e:  # pragma: no cover - depends on local install
         known_terms=None,
     ) -> str:
         if temporary:
-            return "temp furiten"
-        return "furiten" if furiten else "not furiten"
+            return "passed a win this turn"
+        return "can’t win on discard" if furiten else ""
 
     def glossed_ukeire_count(count: int, *, known_terms=None) -> str:  # type: ignore
         return f"ukeire {count}"
@@ -156,6 +156,25 @@ def _dahai_reaction_missing_from_hand(reaction: dict, game_info: Any) -> bool:
     if not pai:
         return False
     return _tile_missing_from_hand(str(pai), hand_tiles_from_game_info(game_info))
+
+
+def _kan_reaction_illegal_tile(reaction: dict, game_info: Any) -> bool:
+    """True when a kan reaction names a tile the hand doesn't hold 3/4 of."""
+    kind = reaction.get("type") or ""
+    if kind not in ("kan_select", "daiminkan", "kakan", "ankan"):
+        return False
+    pai = reaction.get("pai")
+    if not pai:
+        return False
+    if not SENSEI_AVAILABLE:
+        return False
+    try:
+        from shanten_sensei.tiles import hand_tile_count
+    except ImportError:  # pragma: no cover
+        return False
+    n = hand_tile_count(hand_tiles_from_game_info(game_info), str(pai))
+    need = 4 if kind == "ankan" else 3
+    return n < need
 
 
 def status_line_from_turn(
@@ -407,6 +426,7 @@ class SenseiCoach:
         game_info: Any,
         *,
         include_score_tips: bool = False,
+        include_table_tips: bool = False,
         known_terms: list[str] | tuple[str, ...] | None = None,
     ) -> tuple:
         kyoku = getattr(game_info, "kyoku", None) if game_info else None
@@ -419,6 +439,7 @@ class SenseiCoach:
             reaction.get("pai"),
             tuple(reaction.get("consumed") or ()),
             bool(include_score_tips),
+            bool(include_table_tips),
             known_key,
         )
 
@@ -428,6 +449,7 @@ class SenseiCoach:
         game_info: Any,
         *,
         include_score_tips: bool = False,
+        include_table_tips: bool = False,
         known_terms: list[str] | tuple[str, ...] | None = None,
     ) -> bool:
         """Clear Why if reaction is gone or key differs. Returns True if still current."""
@@ -442,6 +464,7 @@ class SenseiCoach:
             reaction,
             game_info,
             include_score_tips=include_score_tips,
+            include_table_tips=include_table_tips,
             known_terms=known_terms,
         )
         if self._cache_key is not None and key != self._cache_key:
@@ -458,6 +481,7 @@ class SenseiCoach:
         *,
         use_llm: bool | None = None,
         include_score_tips: bool = False,
+        include_table_tips: bool = False,
         known_terms: list[str] | tuple[str, ...] | None = None,
     ) -> WhyResult:
         self._maybe_roll_kyoku(game_info)
@@ -465,7 +489,7 @@ class SenseiCoach:
             return WhyResult(
                 ok=False,
                 summary="",
-                error="Install shanten-sensei: pip install 'shanten-sensei>=0.1.0'",
+                error="Install shanten-sensei: pip install 'shanten-sensei>=0.1.2'",
             )
         if not mode.why_enabled:
             return WhyResult(
@@ -480,6 +504,7 @@ class SenseiCoach:
             reaction,
             game_info,
             include_score_tips=include_score_tips,
+            include_table_tips=include_table_tips,
             known_terms=known_terms,
         )
         if key == self._cache_key and self._cache_result is not None:
@@ -497,6 +522,23 @@ class SenseiCoach:
                 status_line=self.last_status_line,
                 aiming_for=self.last_aiming_for,
                 error="Recommended discard not in hand",
+            )
+            self._cache_key = key
+            self._cache_result = result
+            self.last_result = result
+            return result
+
+        if _kan_reaction_illegal_tile(reaction, game_info):
+            self.refresh_board_features(
+                game_info, game_state, reaction=None, known_terms=known_terms
+            )
+            result = WhyResult(
+                ok=False,
+                summary="",
+                pinned_action=str(reaction.get("type") or "kan"),
+                status_line=self.last_status_line,
+                aiming_for=self.last_aiming_for,
+                error="Recommended kan tile not held as a triplet or quad",
             )
             self._cache_key = key
             self._cache_result = result
@@ -531,6 +573,7 @@ class SenseiCoach:
                 turn,
                 use_llm=use_llm,
                 include_score_tips=include_score_tips,
+                include_table_tips=include_table_tips,
                 known_terms=known_terms,
             )
             result = WhyResult(

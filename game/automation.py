@@ -314,9 +314,11 @@ class Automation:
             self._task.stop()
             self._task = None
             
-    def can_automate(self, cancel_on_running:bool=False, limit_state:UiState=None) -> bool:
+    def can_automate(self, cancel_on_running:bool=False, limit_state:UiState=None, game_state=None) -> bool:
         """return True if automation conditions met """
         if not self.st.enable_automation: # automation not enabled
+            return False
+        if game_state is not None and not game_state.get_mode_verdict().assist_enabled:
             return False
         if not self.executor.is_page_normal():  # browser is not running
             return False
@@ -377,7 +379,7 @@ class Automation:
             game_state(GameState): game state object
         Returns:
             bool: True means automation kicks off. False means not automating."""
-        if not self.can_automate():
+        if not self.can_automate(game_state=game_state):
             return False
         if game_state is None or mjai_action is None:
             return False          
@@ -485,12 +487,12 @@ class Automation:
         
     def automate_retry_pending(self, game_state:GameState):
         """ retry pending action from game state"""
-        if not self.can_automate(True, UiState.IN_GAME):
+        if game_state is None:
+            return False
+        if not self.can_automate(True, UiState.IN_GAME, game_state=game_state):
             return
         if time.time() - self.last_exec_time() < self.st.auto_retry_interval:
             # interval not reached, cancel
-            return False
-        if game_state is None:
             return False
         pend_action = game_state.get_pending_reaction()
         if pend_action is None:
@@ -858,20 +860,5 @@ class Automation:
             yield step    
     
     def decide_lobby_action(self):
-        """ decide what "lobby action" to execute based on current state."""
-        if not self.can_automate(True):
-            return
-        if self._task:      # Cancel if interval not reached
-            if time.time() - self._task.last_exe_time < self.st.auto_retry_interval:                
-                return False
-            
-        if self.ui_state == UiState.NOT_RUNNING:
-            pass
-        elif self.ui_state == UiState.MAIN_MENU:
-            self.automate_join_game()
-        elif self.ui_state == UiState.IN_GAME:
-            pass
-        elif self.ui_state == UiState.GAME_ENDING:
-            self.automate_end_game()
-        else:
-            LOGGER.error("Unknow UI state:%s", self.ui_state)
+        """Auto Join is disabled (ranked queue). No lobby automation."""
+        return
