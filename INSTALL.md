@@ -7,8 +7,8 @@ Practice / friend / vs-AI only — **not for ranked**. Coaching (Why?, live tips
 ## Option A — Disk image (recommended)
 
 1. Open [Releases](https://github.com/rclarke009/shanten-sensei-overlay/releases/latest).
-2. Download **`ShantenSensei-macOS.dmg`**. Do **not** download the standalone `Install-Shanten-Sensei.command` from Assets (GitHub strips the execute bit, and macOS will block it).
-3. Open the disk image and drag **Shanten Sensei** to Applications (or `~/Applications`).
+2. Download **`ShantenSensei-macOS.dmg`**.
+3. Open the disk image and drag **Shanten Sensei** to Applications (or `~/Applications`). Do not run any `.command` from the release assets.
 4. Open the app, complete the **first-run wizard**, then play Majsoul in **Safari** and press **Why?**.
 
 If you already have the `.dmg` in Downloads, use that. Skip the zip / `.command`.

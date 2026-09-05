@@ -31,32 +31,41 @@ jobs:
       - name: Prepare native libraries
         run: bash scripts/prepare-macos-bundle.sh
 
+      - name: Guard launch crash (tile font)
+        run: python -c "from gui.utils import GuiStyle; assert hasattr(GuiStyle, 'font_tile')"
+
       - name: Build app bundle
         run: pyinstaller ShantenSensei.spec --noconfirm
 
-      - name: Require signing secrets on tagged releases
-        if: startsWith(github.ref, 'refs/tags/')
+      # secrets.* is not allowed in step `if:` — detect via env/output instead.
+      - name: Detect signing certificate
+        id: signing
         env:
           HAS_CERT: ${{ secrets.MACOS_CERTIFICATE_P12 }}
         run: |
-          if [[ -z "${HAS_CERT}" ]]; then
+          if [[ -n "${HAS_CERT}" ]]; then
+            echo "has_cert=1" >> "$GITHUB_OUTPUT"
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             echo "Tagged releases require overlay secret MACOS_CERTIFICATE_P12 (and notary secrets)." >&2
             exit 1
+          else
+            echo "has_cert=0" >> "$GITHUB_OUTPUT"
+            echo "No signing cert; building an unsigned artifact."
           fi
 
       - name: Import Developer ID certificate
-        if: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
+        if: steps.signing.outputs.has_cert == '1'
         uses: apple-actions/import-codesign-certs@v7.0.0
         with:
           p12-file-base64: ${{ secrets.MACOS_CERTIFICATE_P12 }}
           p12-password: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
 
       - name: Sign app
-        if: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
+        if: steps.signing.outputs.has_cert == '1'
         run: bash scripts/sign-macos-app.sh "dist/Shanten Sensei.app"
 
       - name: Notarize and staple app
-        if: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
+        if: steps.signing.outputs.has_cert == '1'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
@@ -67,7 +76,7 @@ jobs:
         run: bash scripts/create-macos-dmg.sh
 
       - name: Sign, notarize, and staple DMG
-        if: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
+        if: steps.signing.outputs.has_cert == '1'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
@@ -88,7 +97,6 @@ jobs:
           generate_release_notes: true
           files: |
             dist/Install-Shanten-Sensei.zip
-            scripts/Install-Shanten-Sensei.command
             dist/ShantenSensei-macOS.dmg
             dist/ShantenSensei-macOS.dmg.sha256
             INSTALL.md
